@@ -13,21 +13,42 @@ Dotfiles optimized for **Terraform/Infrastructure as Code** development in [Code
 
 ## Quick Start
 
-### Option 1: One-liner Install (from GitHub)
+### Option 1: Coder Dotfiles Module (Recommended)
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/dotfiles/main/install.sh | bash
+Add to your Coder template:
+
+```hcl
+module "dotfiles" {
+  count    = data.coder_workspace.me.start_count
+  source   = "registry.coder.com/modules/dotfiles/coder"
+  version  = "1.0.29"
+  agent_id = coder_agent.example.id
+}
 ```
 
-### Option 2: Clone and Install
+Then set your dotfiles URL in Coder to: `https://github.com/ausbru87/dotfiles.git`
+
+### Option 2: One-liner Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/dotfiles.git ~/.dotfiles
+curl -fsSL https://raw.githubusercontent.com/ausbru87/dotfiles/main/install.sh | bash
+```
+
+### Option 3: Clone and Install
+
+```bash
+git clone https://github.com/ausbru87/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 ./install.sh
 ```
 
-### Option 3: Use with Coder Templates
+### Option 4: Coder CLI
+
+```bash
+coder dotfiles https://github.com/ausbru87/dotfiles.git
+```
+
+### Option 5: Hardcode in Template
 
 Add to your Coder template's startup script:
 
@@ -37,7 +58,7 @@ resource "coder_agent" "main" {
   startup_script = <<-EOT
     # Install dotfiles
     if [ ! -d ~/.dotfiles ]; then
-      git clone https://github.com/YOUR_USERNAME/dotfiles.git ~/.dotfiles
+      git clone https://github.com/ausbru87/dotfiles.git ~/.dotfiles
       ~/.dotfiles/install.sh
     fi
   EOT

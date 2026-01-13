@@ -1,12 +1,23 @@
 #!/bin/bash
 # Dotfiles installer for Coder workspaces
-# This script is designed to be run via:
-#   curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/dotfiles/main/install.sh | bash
+# 
+# Works with:
+#   1. Coder dotfiles module: coder dotfiles https://github.com/ausbru87/dotfiles.git
+#   2. Direct curl: curl -fsSL https://raw.githubusercontent.com/ausbru87/dotfiles/main/install.sh | bash
 
 set -euo pipefail
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
-DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/YOUR_USERNAME/dotfiles.git}"
+# Detect if running via coder dotfiles (script is in the cloned repo)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/.bashrc" ]]; then
+    # Running from within cloned repo (coder dotfiles)
+    DOTFILES_DIR="$SCRIPT_DIR"
+else
+    # Running via curl or standalone
+    DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
+fi
+
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/ausbru87/dotfiles.git}"
 
 # Colors for output
 RED='\033[0;31m'
