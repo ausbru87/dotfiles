@@ -105,6 +105,8 @@ if [[ "$DOTFILES_OS" == "darwin" ]]; then
 else
   # Linux
   [[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
+  [[ -d "$HOME/bin" ]] && export PATH="$HOME/bin:$PATH"
+  [[ -d "/usr/local/bin" ]] && export PATH="/usr/local/bin:$PATH"
 
   alias ls='ls --color=auto'
   alias clipboard='xclip -selection clipboard'
