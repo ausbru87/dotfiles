@@ -1,0 +1,224 @@
+# ~/.gitconfig
+# Global Git configuration
+
+[user]
+  # Update these with your actual information:
+  # git config --global user.name "Your Name"
+  # git config --global user.email "your.email@example.com"
+  name = YOUR_NAME
+  email = YOUR_EMAIL
+
+[core]
+  editor = vim
+  whitespace = fix,-indent-with-non-tab,trailing-space,cr-at-eol
+  pager = less -FRX
+  excludesfile = ~/.gitignore_global
+  autocrlf = input
+  # Improve performance for large repos
+  preloadindex = true
+  fscache = true
+
+[init]
+  defaultBranch = main
+
+[pull]
+  rebase = true
+
+[push]
+  default = current
+  followTags = true
+  autoSetupRemote = true
+
+[fetch]
+  prune = true
+  prunetags = true
+
+[rebase]
+  autoStash = true
+  autoSquash = true
+
+[merge]
+  conflictStyle = diff3
+  ff = false
+
+[diff]
+  colorMoved = zebra
+  algorithm = histogram
+  tool = vimdiff
+
+[commit]
+  template = ~/.gitmessage
+  verbose = true
+
+[color]
+  ui = auto
+  branch = auto
+  diff = auto
+  status = auto
+
+[color "branch"]
+  current = yellow bold
+  local = green bold
+  remote = cyan bold
+
+[color "diff"]
+  meta = yellow bold
+  frag = magenta bold
+  old = red bold
+  new = green bold
+  whitespace = red reverse
+
+[color "status"]
+  added = green bold
+  changed = yellow bold
+  untracked = red bold
+
+###############################################################################
+# Aliases
+###############################################################################
+
+[alias]
+  # Basic shortcuts
+  a = add
+  aa = add --all
+  ap = add --patch
+  b = branch
+  c = commit
+  cm = commit -m
+  co = checkout
+  cob = checkout -b
+  d = diff
+  ds = diff --staged
+  dt = difftool
+  f = fetch
+  l = pull
+  p = push
+  pf = push --force-with-lease
+  r = remote
+  s = status
+  st = status -sb
+
+  # Branch management
+  br = branch
+  bra = branch -a
+  brd = branch -d
+  brD = branch -D
+  brm = branch -m
+
+  # Commit operations
+  amend = commit --amend --no-edit
+  amendf = commit --amend
+  undo = reset --soft HEAD~1
+  unstage = reset HEAD --
+
+  # Log aliases
+  lg = log --graph --oneline --decorate --all
+  lga = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)'
+  last = log -1 HEAD --stat
+  logs = log --stat
+  logp = log --patch
+  hist = log --pretty=format:'%h %ad | %s%d [%an]' --graph --date=short
+
+  # Show changes
+  show-files = show --name-only
+  show-stat = show --stat
+
+  # Stash operations
+  stash-list = stash list
+  stash-apply = stash apply
+  stash-pop = stash pop
+  stash-drop = stash drop
+
+  # Working with remotes
+  remotes = remote -v
+  origin = remote get-url origin
+  upstream = remote get-url upstream
+
+  # Cleanup
+  clean-branches = !git branch --merged | grep -v '\\*\\|main\\|master\\|develop' | xargs -n 1 git branch -d
+  prune-all = !git remote | xargs git remote prune
+
+  # Find commits by message
+  find = log --all --grep
+
+  # List aliases
+  aliases = config --get-regexp alias
+
+  # Show contributors
+  contributors = shortlog --summary --numbered --email
+
+  # Quick stats
+  stats = shortlog -sn
+
+  # Assume unchanged (ignore changes to tracked files)
+  assume = update-index --assume-unchanged
+  unassume = update-index --no-assume-unchanged
+  assumed = !git ls-files -v | grep ^h | cut -c 3-
+
+  # Tags
+  tags = tag -l
+
+  # Submodules
+  sub-update = submodule update --remote --merge
+
+  # Show current branch
+  current-branch = rev-parse --abbrev-ref HEAD
+
+  # Create a new branch and switch to it
+  new = checkout -b
+
+  # Delete local branches that don't exist on remote
+  sync = fetch --prune
+
+  # Show the most recent tag
+  latest-tag = describe --tags --abbrev=0
+
+[help]
+  autocorrect = 10
+
+[credential]
+  helper = cache --timeout=3600
+
+[grep]
+  lineNumber = true
+  extendedRegexp = true
+
+###############################################################################
+# GitHub/GitLab Configuration
+###############################################################################
+
+[github]
+  user = YOUR_GITHUB_USERNAME
+
+[gitlab]
+  user = YOUR_GITLAB_USERNAME
+
+###############################################################################
+# GPG Signing (Optional - Uncomment if you use GPG signing)
+###############################################################################
+
+# [commit]
+#   gpgsign = true
+# [user]
+#   signingkey = YOUR_GPG_KEY_ID
+
+###############################################################################
+# Include Local/Private Configuration
+###############################################################################
+
+# Use this for machine-specific or private configuration
+# Create ~/.gitconfig.local for settings you don't want in dotfiles
+[include]
+  path = ~/.gitconfig.local
+
+###############################################################################
+# URL Rewrites (Optional)
+###############################################################################
+
+# Use HTTPS instead of git:// for GitHub
+[url "https://github.com/"]
+  insteadOf = git://github.com/
+
+# SSH instead of HTTPS for GitHub (uncomment if preferred)
+# [url "git@github.com:"]
+#   insteadOf = https://github.com/

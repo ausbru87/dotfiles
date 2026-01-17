@@ -1,0 +1,64 @@
+# VS Code Extensions
+# This list will be automatically installed by the install.sh script
+# Or manually install with: cat extensions.txt | xargs -L 1 code --install-extension
+
+# Version Control
+eamodio.gitlens
+mhutchie.git-graph
+donjayamanne.githistory
+
+# Docker & Kubernetes
+ms-azuretools.vscode-docker
+ms-kubernetes-tools.vscode-kubernetes-tools
+
+# Remote Development
+ms-vscode-remote.remote-ssh
+ms-vscode-remote.remote-containers
+ms-vscode-remote.remote-wsl
+
+# Language Support - Python
+ms-python.python
+ms-python.vscode-pylance
+ms-python.black-formatter
+
+# Language Support - JavaScript/TypeScript
+dbaeumer.vscode-eslint
+esbenp.prettier-vscode
+bradlc.vscode-tailwindcss
+
+# Language Support - Go
+golang.go
+
+# Language Support - Rust
+rust-lang.rust-analyzer
+
+# Language Support - Other
+redhat.vscode-yaml
+redhat.vscode-xml
+ms-vscode.makefile-tools
+
+# Markdown
+yzhang.markdown-all-in-one
+davidanson.vscode-markdownlint
+
+# Code Quality & Formatting
+editorconfig.editorconfig
+streetsidesoftware.code-spell-checker
+
+# Productivity
+vscodevim.vim
+christian-kohler.path-intellisense
+formulahendry.auto-rename-tag
+usernamehw.errorlens
+
+# Themes & Icons
+monokai.theme-monokai-pro-vscode
+pkief.material-icon-theme
+vscode-icons-team.vscode-icons
+
+# REST API
+humao.rest-client
+
+# Misc
+gruntfuggly.todo-tree
+wayou.vscode-todo-highlight

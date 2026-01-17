@@ -1,0 +1,45 @@
+# <type>: <subject> (Max 50 characters)
+
+# <body> (Wrap at 72 characters)
+
+# <footer>
+
+# --- COMMIT GUIDELINES ---
+#
+# Type should be one of the following:
+# * feat:     A new feature
+# * fix:      A bug fix
+# * docs:     Documentation only changes
+# * style:    Changes that don't affect code meaning (white-space, formatting, etc)
+# * refactor: Code change that neither fixes a bug nor adds a feature
+# * perf:     Code change that improves performance
+# * test:     Adding missing tests or correcting existing tests
+# * chore:    Changes to build process or auxiliary tools
+# * ci:       Changes to CI configuration files and scripts
+# * build:    Changes that affect the build system or dependencies
+# * revert:   Reverts a previous commit
+#
+# Subject:
+# * Use imperative mood ("Add feature" not "Added feature")
+# * Don't capitalize first letter
+# * No period at the end
+# * Keep under 50 characters
+#
+# Body:
+# * Explain what and why (not how)
+# * Wrap at 72 characters
+# * Separate from subject with blank line
+# * Use bullet points with - or *
+#
+# Footer:
+# * Reference issues: Fixes #123, Closes #456
+# * Breaking changes: BREAKING CHANGE: description
+#
+# Example:
+# feat: add user authentication module
+#
+# - Implement JWT token generation
+# - Add login/logout endpoints
+# - Create user session management
+#
+# Closes #45
