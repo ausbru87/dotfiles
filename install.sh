@@ -272,6 +272,13 @@ main() {
   install_vim_plug
   echo ""
 
+  # Set zsh as default shell
+  if [[ "$SHELL" != *"zsh"* ]]; then
+    log_info "Setting zsh as default shell..."
+    chsh -s "$(which zsh)"
+  fi
+  echo ""
+
   log_success "Dotfiles installation complete!"
   echo ""
   echo -e "${GREEN}Profile:${NC} ${DOTFILES_PROFILE:-devops} (auto-detected or set DOTFILES_PROFILE)"
