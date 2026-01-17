@@ -97,6 +97,9 @@ if [[ "$DOTFILES_OS" == "darwin" ]]; then
     eval "$(/usr/local/bin/brew shellenv)"
   fi
 
+  [[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
+  [[ -d "$HOME/bin" ]] && export PATH="$HOME/bin:$PATH"
+
   # macOS aliases
   alias ls='ls -G'
   alias clipboard='pbcopy'
