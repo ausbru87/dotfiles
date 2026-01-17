@@ -1,256 +1,79 @@
-# 🚀 Coder Workspace Dotfiles
+# Dotfiles
 
-Dotfiles optimized for **Terraform/Infrastructure as Code** development in [Coder](https://coder.com) workspaces.
-
-## Features
-
-- **Terraform & Terragrunt** - Aliases, functions, and vim support for HCL development
-- **Multi-cloud CLI support** - AWS, Azure, GCP, and OpenShift integrations
-- **Kubernetes tooling** - kubectl, helm, k9s aliases and completions
-- **AWS CDK** - Node.js and CDK environment setup
-- **Security tools** - TFLint, tfsec, Checkov, Infracost integrations
-- **Quality of life** - Sensible git config, vim setup, tmux config, and shell enhancements
+Multi-profile dotfiles for macOS, Linux, and Coder workspaces.
 
 ## Quick Start
 
-### Option 1: Coder Dotfiles Module (Recommended)
+```bash
+# Clone and install
+git clone https://github.com/YOUR_USERNAME/dotfiles.git ~/.dotfiles
+cd ~/.dotfiles && ./install.sh
+```
 
-Add to your Coder template:
+## Coder Workspaces
+
+Works with the [Coder dotfiles module](https://registry.coder.com/modules/coder/dotfiles):
 
 ```hcl
 module "dotfiles" {
-  count    = data.coder_workspace.me.start_count
   source   = "registry.coder.com/modules/dotfiles/coder"
-  version  = "1.0.29"
-  agent_id = coder_agent.example.id
+  agent_id = coder_agent.main.id
 }
 ```
 
-Then set your dotfiles URL in Coder to: `https://github.com/ausbru87/dotfiles.git`
+## Profiles
 
-### Option 2: One-liner Install
+Auto-detected from workspace name or set via `DOTFILES_PROFILE`:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/ausbru87/dotfiles/main/install.sh | bash
-```
+| Profile | Trigger patterns | Tools |
+|---------|-----------------|-------|
+| **devops** (default) | `*devops*`, `*infra*`, `*k8s*` | kubectl, helm, terraform, oc |
+| **java** | `*java*`, `*spring*`, `*jvm*` | maven, gradle, SDKMAN |
+| **ml** | `*ml*`, `*ai*`, `*jupyter*` | conda, pip, jupyter |
 
-### Option 3: Clone and Install
+Override: `export DOTFILES_PROFILE=java`
 
-```bash
-git clone https://github.com/ausbru87/dotfiles.git ~/.dotfiles
-cd ~/.dotfiles
-./install.sh
-```
-
-### Option 4: Coder CLI
-
-```bash
-coder dotfiles https://github.com/ausbru87/dotfiles.git
-```
-
-### Option 5: Hardcode in Template
-
-Add to your Coder template's startup script:
-
-```hcl
-resource "coder_agent" "main" {
-  # ...
-  startup_script = <<-EOT
-    # Install dotfiles
-    if [ ! -d ~/.dotfiles ]; then
-      git clone https://github.com/ausbru87/dotfiles.git ~/.dotfiles
-      ~/.dotfiles/install.sh
-    fi
-  EOT
-}
-```
-
-## Install Tools
-
-Install DevOps tools with the included script:
-
-```bash
-# Install all tools
-./install-tools.sh --all
-
-# Install core IaC tools (terraform, terragrunt, cloud CLIs)
-./install-tools.sh --core
-
-# Install specific tools
-./install-tools.sh terraform terragrunt aws-cli kubectl
-
-# See all options
-./install-tools.sh --help
-```
-
-### Available Tools
-
-| Category | Tools |
-|----------|-------|
-| **Core IaC** | terraform, terragrunt, aws-cli, azure-cli, gcloud, oc (OpenShift) |
-| **Kubernetes** | kubectl, helm, kubectx, kubens, k9s |
-| **Security** | tflint, tfsec, checkov |
-| **Utilities** | jq, yq, terraform-docs, infracost |
-| **CDK** | nodejs (via nvm), aws-cdk |
-
-## What's Included
+## Structure
 
 ```
 dotfiles/
-├── install.sh           # Main installer script
-├── install-tools.sh     # DevOps tools installer
-├── .bashrc              # Shell configuration
-├── .bash_terraform      # Terraform/IaC specific config
-├── .gitconfig           # Git configuration
-├── .gitignore_global    # Global gitignore
-├── .vimrc               # Vim configuration (Terraform-optimized)
-├── .tmux.conf           # Tmux configuration
-├── .inputrc             # Readline configuration
-└── README.md            # This file
+├── install.sh          # Main installer (Coder-compatible)
+├── core/               # Shared configs
+│   ├── .zshrc          # Shell with auto-detection
+│   ├── .gitconfig
+│   ├── .tmux.conf
+│   └── .vimrc
+├── profiles/           # Profile-specific aliases
+│   ├── devops/
+│   ├── java/
+│   └── ml/
+├── starship/           # Prompt config
+└── vscode/             # Editor settings
 ```
 
-## Key Aliases & Functions
+## Features
 
-### Terraform
+- **Cross-platform**: macOS + Linux (apt/dnf/yum)
+- **Auto-detection**: OS, arch, Coder workspace, SSH server
+- **Idempotent**: Safe to re-run
+- **Fast**: Skips already-installed tools
+- **Non-interactive**: `-y` flag or auto-detect Coder
 
-| Alias | Command |
-|-------|---------|
-| `tf` | `terraform` |
-| `tfi` | `terraform init` |
-| `tfp` | `terraform plan` |
-| `tfa` | `terraform apply` |
-| `tfaa` | `terraform apply -auto-approve` |
-| `tfd` | `terraform destroy` |
-| `tfv` | `terraform validate` |
-| `tff` | `terraform fmt` |
-| `tfsl` | `terraform state list` |
+## Environment Variables
 
-**Functions:**
-- `tfinit [env]` - Init with backend config for environment
-- `tfplan [file]` - Plan with output file
-- `tfcheck` - Format and validate
-- `tgclean` - Clean terragrunt cache
+| Variable | Description |
+|----------|-------------|
+| `DOTFILES_PROFILE` | Force profile (devops, java, ml) |
+| `DOTFILES_SKIP_TOOLS` | Skip tool installation (1 = skip) |
 
-### Terragrunt
+## Core Tools Installed
 
-| Alias | Command |
-|-------|---------|
-| `tg` | `terragrunt` |
-| `tgi` | `terragrunt init` |
-| `tgp` | `terragrunt plan` |
-| `tga` | `terragrunt apply` |
-| `tgra` | `terragrunt run-all` |
-| `tgrap` | `terragrunt run-all plan` |
+zsh, tmux, vim, neovim, fzf, ripgrep, fd, jq, starship, oh-my-zsh
 
-### AWS
+## Local Overrides
 
-| Alias/Function | Description |
-|----------------|-------------|
-| `aws-whoami` | Show current identity |
-| `aws-profile [name]` | Switch/show AWS profile |
-| `aws-assume-role <arn>` | Assume IAM role |
-| `aws-unassume` | Clear assumed role |
-| `ec2-ls` | List EC2 instances |
-| `ecr-login` | Login to ECR |
-
-### Azure
-
-| Alias/Function | Description |
-|----------------|-------------|
-| `az-whoami` | Show current account |
-| `az-sub [id]` | Switch/list subscriptions |
-| `az-aks-creds <rg> <cluster>` | Get AKS credentials |
-| `acr-login <name>` | Login to ACR |
-
-### Google Cloud
-
-| Alias/Function | Description |
-|----------------|-------------|
-| `gcp-whoami` | Show current account |
-| `gcp-switch [project]` | Switch/list projects |
-| `gke-creds <cluster> <zone>` | Get GKE credentials |
-| `gcr-login` | Configure Docker for GCR |
-
-### Kubernetes
-
-| Alias | Command |
-|-------|---------|
-| `k` | `kubectl` |
-| `kgp` | `kubectl get pods` |
-| `kgpa` | `kubectl get pods --all-namespaces` |
-| `kgs` | `kubectl get svc` |
-| `kgd` | `kubectl get deployments` |
-| `kl` | `kubectl logs -f` |
-| `kex` | `kubectl exec -it` |
-| `kaf` | `kubectl apply -f` |
-
-### Multi-Cloud
-
-- `cloud-status` - Show authentication status for all cloud providers
-
-## Vim Keybindings
-
-Leader key: `<Space>`
-
-| Binding | Action |
-|---------|--------|
-| `<leader>ti` | `terraform init` |
-| `<leader>tp` | `terraform plan` |
-| `<leader>ta` | `terraform apply` |
-| `<leader>tf` | `terraform fmt` (current file) |
-| `<leader>e` | Toggle file explorer |
-| `<leader>ff` | Find files (fzf) |
-
-## Tmux Keybindings
-
-Prefix: `Ctrl+a`
-
-| Binding | Action |
-|---------|--------|
-| `Prefix + \|` | Split vertically |
-| `Prefix + -` | Split horizontally |
-| `Prefix + h/j/k/l` | Navigate panes (vim-style) |
-| `Prefix + T` | Terraform layout |
-| `Prefix + K` | Kubernetes layout |
-| `Prefix + S` | Sync panes (multi-server) |
-| `Prefix + r` | Reload config |
-
-## Customization
-
-### Local Overrides
-
-Create `~/.bashrc.local` for machine-specific settings:
-
-```bash
-# ~/.bashrc.local
-export AWS_DEFAULT_REGION="eu-west-1"
-export TF_VAR_environment="staging"
-```
-
-### Tool Versions
-
-Override default versions via environment variables:
-
-```bash
-TERRAFORM_VERSION="1.6.0" ./install-tools.sh terraform
-KUBECTL_VERSION="1.28.0" ./install-tools.sh kubectl
-```
-
-## Coder Integration
-
-These dotfiles automatically detect Coder workspace environment variables:
-
-- `CODER_WORKSPACE_NAME` - Displayed in prompt and tmux
-- `CODER_WORKSPACE_OWNER_EMAIL` - Auto-configured in git
-- `CODER_WORKSPACE_OWNER_NAME` - Auto-configured in git
-
-## Requirements
-
-- Bash 4.0+
-- Git
-- curl or wget
-- unzip (for some tool installations)
-
-## License
-
-MIT
+Create these files for machine-specific config (not tracked):
+- `~/.zshrc.local`
+- `~/.gitconfig.local`
+- `~/.tmux.conf.local`
+- `~/.vimrc.local`

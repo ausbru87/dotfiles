@@ -1,0 +1,48 @@
+# ~/.config/starship.toml
+# Balanced prompt: directory, git, k8s, command duration
+
+"$schema" = 'https://starship.rs/config-schema.json'
+command_timeout = 1000
+add_newline = true
+
+format = """$time$directory$git_branch$git_status$kubernetes$cmd_duration
+$character"""
+
+[time]
+disabled = false
+format = "[\\[$time\\]]($style) "
+time_format = "%H:%M"
+style = "dimmed white"
+
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[✗](bold red)"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+style = "bold cyan"
+truncation_symbol = "…/"
+
+[git_branch]
+format = "\\([$branch]($style)\\) "
+style = "bold purple"
+
+[git_status]
+format = '([$all_status$ahead_behind]($style) )'
+style = "bold red"
+ahead = "↑${count}"
+behind = "↓${count}"
+diverged = "↑${ahead_count}↓${behind_count}"
+untracked = "?${count}"
+modified = "!${count}"
+staged = "+${count}"
+deleted = "x${count}"
+
+[kubernetes]
+format = '[k8s:$context](dimmed cyan) '
+disabled = false
+
+[cmd_duration]
+min_time = 2000
+format = "[$duration](yellow) "
