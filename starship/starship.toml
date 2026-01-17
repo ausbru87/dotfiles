@@ -5,8 +5,13 @@
 command_timeout = 1000
 add_newline = true
 
-format = """$time$directory$git_branch$git_status$kubernetes$cmd_duration
+format = """$time$hostname$directory$git_branch$git_status$kubernetes$cmd_duration
 $character"""
+
+[hostname]
+ssh_only = false
+format = "[$hostname](bold blue) "
+disabled = false
 
 [time]
 disabled = false

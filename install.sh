@@ -139,6 +139,7 @@ install_core_tools() {
     if [[ "$PKG_MGR" == "brew" ]]; then
       brew install awscli
     else
+      install_if_missing unzip
       curl -sS "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
       unzip -q /tmp/awscliv2.zip -d /tmp
       sudo /tmp/aws/install
