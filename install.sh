@@ -151,6 +151,149 @@ install_core_tools() {
 }
 
 ###############################################################################
+# DevOps Tools Installation
+###############################################################################
+
+install_devops_tools() {
+  [[ "${DOTFILES_SKIP_TOOLS:-}" == "1" ]] && { log_info "Skipping devops tools"; return 0; }
+
+  log_info "Installing DevOps tools..."
+
+  # System packages
+  install_if_missing htop
+  if [[ "$PKG_MGR" == "apt" ]]; then
+    install_if_missing ifconfig net-tools
+    install_if_missing dig dnsutils
+  elif [[ "$PKG_MGR" == "dnf" ]] || [[ "$PKG_MGR" == "yum" ]]; then
+    install_if_missing ifconfig net-tools
+    install_if_missing dig bind-utils
+  fi
+
+  # kubectl
+  if ! command -v kubectl &>/dev/null; then
+    log_info "Installing kubectl..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install kubectl
+    else
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+      rm kubectl
+    fi
+  fi
+
+  # helm
+  if ! command -v helm &>/dev/null; then
+    log_info "Installing helm..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install helm
+    else
+      curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    fi
+  fi
+
+  # k9s
+  if ! command -v k9s &>/dev/null; then
+    log_info "Installing k9s..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install derailed/k9s/k9s
+    else
+      K9S_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest | jq -r .tag_name)
+      curl -sL "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz" | sudo tar xz -C /usr/local/bin k9s
+    fi
+  fi
+
+  # kubectx/kubens
+  if ! command -v kubectx &>/dev/null; then
+    log_info "Installing kubectx/kubens..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install kubectx
+    else
+      sudo git clone https://github.com/ahmetb/kubectx /opt/kubectx
+      sudo ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx
+      sudo ln -sf /opt/kubectx/kubens /usr/local/bin/kubens
+    fi
+  fi
+
+  # terraform
+  if ! command -v terraform &>/dev/null; then
+    log_info "Installing terraform..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew tap hashicorp/tap
+      brew install hashicorp/tap/terraform
+    elif [[ "$PKG_MGR" == "apt" ]]; then
+      install_if_missing gpg gnupg
+      wget -qO- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+      sudo apt-get update -qq && sudo apt-get install -y terraform
+    else
+      # dnf/yum
+      sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo 2>/dev/null || true
+      sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo 2>/dev/null || true
+      sudo ${PKG_MGR} install -y terraform
+    fi
+  fi
+
+  # terragrunt
+  if ! command -v terragrunt &>/dev/null; then
+    log_info "Installing terragrunt..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install terragrunt
+    else
+      TG_VERSION=$(curl -s https://api.github.com/repos/gruntwork-io/terragrunt/releases/latest | jq -r .tag_name)
+      sudo curl -sL "https://github.com/gruntwork-io/terragrunt/releases/download/${TG_VERSION}/terragrunt_linux_amd64" -o /usr/local/bin/terragrunt
+      sudo chmod +x /usr/local/bin/terragrunt
+    fi
+  fi
+
+  # ansible
+  if ! command -v ansible &>/dev/null; then
+    log_info "Installing ansible..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install ansible
+    else
+      install_if_missing pip3 python3-pip
+      pip3 install --user ansible
+    fi
+  fi
+
+  # azure-cli
+  if ! command -v az &>/dev/null; then
+    log_info "Installing azure-cli..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install azure-cli
+    else
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    fi
+  fi
+
+  # gcloud
+  if ! command -v gcloud &>/dev/null; then
+    log_info "Installing gcloud CLI..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install --cask google-cloud-sdk
+    else
+      curl -sS https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz | tar xz -C /tmp
+      /tmp/google-cloud-sdk/install.sh --quiet --path-update=true
+      rm -rf /tmp/google-cloud-sdk
+    fi
+  fi
+
+  # argocd CLI
+  if ! command -v argocd &>/dev/null; then
+    log_info "Installing argocd CLI..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install argocd
+    else
+      ARGOCD_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | jq -r .tag_name)
+      sudo curl -sSL -o /usr/local/bin/argocd "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
+      sudo chmod +x /usr/local/bin/argocd
+    fi
+  fi
+
+  log_success "DevOps tools installed"
+}
+
+###############################################################################
 # Oh-My-Zsh Installation
 ###############################################################################
 
@@ -261,6 +404,9 @@ main() {
   echo ""
 
   install_core_tools
+  echo ""
+
+  install_devops_tools
   echo ""
 
   install_ohmyzsh
