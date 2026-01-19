@@ -1,0 +1,58 @@
+#------------------------------------------------------------------------------
+# Example Terraform Variables
+# Copy this file to terraform.tfvars and customize
+#------------------------------------------------------------------------------
+
+# AWS Region
+aws_region = "us-west-2"
+
+# Environment name (used in resource naming)
+environment = "sim"
+
+# VPC CIDR block
+vpc_cidr = "10.0.0.0/16"
+
+#------------------------------------------------------------------------------
+# Domain Configuration
+# Option 1: Use your own domain (requires Route53 hosted zone)
+# Option 2: Leave empty to use nip.io (e.g., <nlb-ip>.nip.io)
+#------------------------------------------------------------------------------
+
+# Uncomment and set if you have a domain
+# domain_name    = "coder.example.com"
+# enable_route53 = true
+
+# Leave empty for nip.io (no DNS setup required)
+domain_name    = ""
+enable_route53 = false
+
+#------------------------------------------------------------------------------
+# EKS Configuration
+#------------------------------------------------------------------------------
+
+eks_cluster_version    = "1.29"
+eks_node_instance_type = "t3.large"
+eks_node_count         = 2
+
+#------------------------------------------------------------------------------
+# TLS Configuration
+# Option 1: Use ACM certificate (recommended for production)
+# Option 2: Use self-signed (default for simulation)
+#------------------------------------------------------------------------------
+
+enable_tls = true
+
+# Uncomment if you have an ACM certificate
+# tls_cert_arn = "arn:aws:acm:us-west-2:123456789:certificate/abc-123"
+
+#------------------------------------------------------------------------------
+# Windows Client
+#------------------------------------------------------------------------------
+
+windows_instance_type = "t3.medium"
+
+# Restrict RDP access to your IP for security
+# allowed_rdp_cidrs = ["1.2.3.4/32"]
+
+# Allow from anywhere (default - only for simulation!)
+allowed_rdp_cidrs = ["0.0.0.0/0"]
