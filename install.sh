@@ -86,8 +86,20 @@ install_packages() {
 
   log_info "Installing dependencies..."
 
-  # Update package list (apt only, once)
-  [[ "$PKG_MGR" == "apt" ]] && sudo apt-get update -qq
+  # Update package list (apt only)
+  if [[ "$PKG_MGR" == "apt" ]]; then
+    # Fix stale third-party GPG keys that cause apt-get update to warn/fail.
+    # Capture missing keys from a dry run and import them.
+    local missing_keys
+    missing_keys=$(sudo apt-get update 2>&1 | grep -oP 'NO_PUBKEY \K[0-9A-F]+' | sort -u) || true
+    if [[ -n "$missing_keys" ]]; then
+      for key in $missing_keys; do
+        log_info "Importing missing apt GPG key: $key"
+        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$key" 2>/dev/null || true
+      done
+      sudo apt-get update -qq
+    fi
+  fi
 
   # Shells & multiplexer
   install_if_missing zsh
@@ -302,7 +314,7 @@ main() {
   create_symlinks
   echo ""
 
-  log_success "Done! Restart your shell or: source ~/.$SHELL_NAME rc"
+  log_success "Done! Restart your shell or: source ~/.${SHELL_NAME}rc"
   echo "  - Run :PlugInstall in vim to install plugins"
   echo "  - Run prefix + I in tmux to install plugins"
   echo ""
