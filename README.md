@@ -1,78 +1,39 @@
 # Dotfiles
 
-Multi-profile dotfiles for macOS, Linux, and Coder workspaces.
+Shell, editor, and git configuration for macOS and Linux.
 
-## Quick Start
+## Install
 
 ```bash
-# Clone and install
-git clone https://github.com/YOUR_USERNAME/dotfiles.git ~/.dotfiles
+git clone git@gitlab.zambruhni.com:lab/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles && ./install.sh
 ```
 
-## Coder Workspaces
+The install script symlinks configs and sets up oh-my-zsh + vim-plug. It does **not** install tools — manage those with your package manager.
 
-Works with the [Coder dotfiles module](https://registry.coder.com/modules/coder/dotfiles):
+## What's Included
 
-```hcl
-module "dotfiles" {
-  source   = "registry.coder.com/modules/dotfiles/coder"
-  agent_id = coder_agent.main.id
-}
-```
+| Config | Description |
+|--------|-------------|
+| `.zshrc` | Zsh with oh-my-zsh, starship prompt, fzf, profile aliases |
+| `.vimrc` | Vim/Neovim with vim-plug, fzf, NERDTree, ALE, gruvbox |
+| `.tmux.conf` | Tmux with C-a prefix, vi keys, mouse, status bar |
+| `.gitconfig` | Git aliases, merge/rebase settings, global ignore |
+| `starship.toml` | Starship prompt with git, k8s, directory info |
+| `vscode/` | VS Code settings and keybindings |
 
-## Profiles
+## Profile Aliases
 
-Auto-detected from workspace name or set via `DOTFILES_PROFILE`:
+Set `DOTFILES_PROFILE` or let it auto-detect from workspace/directory name:
 
-| Profile | Trigger patterns | Tools |
-|---------|-----------------|-------|
-| **devops** (default) | `*devops*`, `*infra*`, `*k8s*` | kubectl, helm, terraform, oc |
-| **java** | `*java*`, `*spring*`, `*jvm*` | maven, gradle, SDKMAN |
-| **ml** | `*ml*`, `*ai*`, `*jupyter*` | conda, pip, jupyter |
-
-Override: `export DOTFILES_PROFILE=java`
-
-## Structure
-
-```
-dotfiles/
-├── install.sh          # Main installer (Coder-compatible)
-├── core/               # Shared configs
-│   ├── .zshrc          # Shell with auto-detection
-│   ├── .gitconfig
-│   ├── .tmux.conf
-│   └── .vimrc
-├── profiles/           # Profile-specific aliases
-│   ├── devops/
-│   ├── java/
-│   └── ml/
-├── starship/           # Prompt config
-└── vscode/             # Editor settings
-```
-
-## Features
-
-- **Cross-platform**: macOS + Linux (apt/dnf/yum)
-- **Auto-detection**: OS, arch, Coder workspace, SSH server
-- **Idempotent**: Safe to re-run
-- **Fast**: Skips already-installed tools
-- **Non-interactive**: `-y` flag or auto-detect Coder
-
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `DOTFILES_PROFILE` | Force profile (devops, java, ml) |
-| `DOTFILES_SKIP_TOOLS` | Skip tool installation (1 = skip) |
-
-## Core Tools Installed
-
-zsh, tmux, vim, neovim, fzf, ripgrep, fd, jq, starship, oh-my-zsh
+- **devops** (default) — kubectl, helm, terraform shortcuts
+- **java** — maven, gradle, Spring Boot shortcuts
+- **ml** — conda, pip, jupyter, pytorch shortcuts
 
 ## Local Overrides
 
-Create these files for machine-specific config (not tracked):
+Machine-specific config (not tracked in git):
+
 - `~/.zshrc.local`
 - `~/.gitconfig.local`
 - `~/.tmux.conf.local`
