@@ -168,6 +168,35 @@ detect_shell() {
 }
 
 ###############################################################################
+# Set Default Shell
+###############################################################################
+
+set_default_shell() {
+  if ! $HAS_ZSH; then
+    return
+  fi
+
+  local zsh_path
+  zsh_path="$(command -v zsh)"
+
+  # Already set to zsh
+  if [[ "$SHELL" == "$zsh_path" ]]; then
+    log_info "Default shell already set to zsh"
+    return
+  fi
+
+  # Ensure zsh is in /etc/shells
+  if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
+    log_info "Adding $zsh_path to /etc/shells"
+    echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null
+  fi
+
+  log_info "Setting default shell to zsh..."
+  sudo chsh -s "$zsh_path" "$(whoami)"
+  log_success "Default shell set to zsh"
+}
+
+###############################################################################
 # Oh-My-Zsh + Plugins (zsh only)
 ###############################################################################
 
@@ -300,6 +329,9 @@ main() {
   echo ""
 
   detect_shell
+  echo ""
+
+  set_default_shell
   echo ""
 
   install_ohmyzsh
