@@ -1,6 +1,6 @@
 # Dotfiles
 
-Shell, editor, and git configuration for macOS and Linux.
+Shell, editor, and git configuration for macOS and Linux. Works with **zsh** or **bash** — the installer detects what's available.
 
 ## Install
 
@@ -9,13 +9,15 @@ git clone git@gitlab.zambruhni.com:lab/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles && ./install.sh
 ```
 
-The install script symlinks configs and sets up oh-my-zsh + vim-plug. It does **not** install tools — manage those with your package manager.
+The install script symlinks configs and sets up shell plugins (oh-my-zsh for zsh, bash-completion for bash) + vim-plug. It does **not** install tools — manage those with your package manager.
 
 ## What's Included
 
 | Config | Description |
 |--------|-------------|
-| `.zshrc` | Zsh with oh-my-zsh, starship prompt, fzf, profile aliases |
+| `.shellrc` | Shared config: aliases, PATH, platform detection, starship, profiles |
+| `.zshrc` | Zsh-specific: oh-my-zsh, plugins, history opts — sources `.shellrc` |
+| `.bashrc` | Bash-specific: history, shopt, completion — sources `.shellrc` |
 | `.vimrc` | Vim/Neovim with vim-plug, fzf, NERDTree, ALE, gruvbox |
 | `.tmux.conf` | Tmux with C-a prefix, vi keys, mouse, status bar |
 | `.gitconfig` | Git aliases, merge/rebase settings, global ignore |
@@ -34,7 +36,7 @@ Set `DOTFILES_PROFILE` or let it auto-detect from workspace/directory name:
 
 Machine-specific config (not tracked in git):
 
-- `~/.zshrc.local`
+- `~/.zshrc.local` / `~/.bashrc.local`
 - `~/.gitconfig.local`
 - `~/.tmux.conf.local`
 - `~/.vimrc.local`

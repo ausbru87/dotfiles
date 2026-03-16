@@ -1,0 +1,139 @@
+# ~/.shellrc
+# Shared shell configuration sourced by both .zshrc and .bashrc
+# Keep this file compatible with bash AND zsh
+
+###############################################################################
+# Platform Detection
+###############################################################################
+
+export DOTFILES_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"  # darwin, linux
+export DOTFILES_ARCH="$(uname -m)"                              # arm64, x86_64
+
+# Environment detection
+if [ -n "${CODER_WORKSPACE_NAME:-}" ]; then
+  export DOTFILES_ENV="coder"
+elif [ -n "$SSH_CONNECTION" ]; then
+  export DOTFILES_ENV="server"
+else
+  export DOTFILES_ENV="local"
+fi
+
+###############################################################################
+# Profile Auto-Detection
+###############################################################################
+
+DOTFILES_PROFILE="${DOTFILES_PROFILE:-}"
+
+if [ -z "$DOTFILES_PROFILE" ]; then
+  case "${CODER_WORKSPACE_NAME:-}${PWD}" in
+    *devops*|*infra*|*k8s*|*terraform*|*ansible*)
+      DOTFILES_PROFILE="devops" ;;
+    *java*|*spring*|*jvm*|*maven*|*gradle*)
+      DOTFILES_PROFILE="java" ;;
+    *ml*|*ai*|*jupyter*|*notebook*|*pytorch*|*tensorflow*)
+      DOTFILES_PROFILE="ml" ;;
+    *)
+      DOTFILES_PROFILE="devops" ;;
+  esac
+fi
+export DOTFILES_PROFILE
+
+###############################################################################
+# PATH
+###############################################################################
+
+if [ "$DOTFILES_OS" = "darwin" ]; then
+  if [ -f "/opt/homebrew/bin/brew" ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [ -f "/usr/local/bin/brew" ]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+fi
+
+[ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"
+[ -d "$HOME/bin" ] && export PATH="$HOME/bin:$PATH"
+[ -d "/usr/local/bin" ] && export PATH="/usr/local/bin:$PATH"
+
+###############################################################################
+# Platform-Specific Aliases
+###############################################################################
+
+if [ "$DOTFILES_OS" = "darwin" ]; then
+  alias ls='ls -G'
+  alias clipboard='pbcopy'
+  alias paste='pbpaste'
+else
+  alias ls='ls --color=auto'
+  alias clipboard='xclip -selection clipboard'
+  alias paste='xclip -selection clipboard -o'
+
+  # Fix bat on Ubuntu/Debian
+  command -v batcat >/dev/null 2>&1 && ! command -v bat >/dev/null 2>&1 && alias bat='batcat'
+fi
+
+###############################################################################
+# Universal Aliases
+###############################################################################
+
+alias ll='ls -lah'
+alias la='ls -A'
+alias l='ls -CF'
+alias grep='grep --color=auto'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+# Editor
+alias v='vim'
+alias nv='nvim'
+
+# Git shortcuts
+alias gs='git status'
+alias gd='git diff'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git pull'
+
+###############################################################################
+# Tool Configuration
+###############################################################################
+
+# FZF
+if command -v fzf >/dev/null 2>&1; then
+  if command -v fd >/dev/null 2>&1; then
+    export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  fi
+  export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+fi
+
+###############################################################################
+# Starship Prompt
+###############################################################################
+
+if command -v starship >/dev/null 2>&1; then
+  if [ -n "$ZSH_VERSION" ]; then
+    eval "$(starship init zsh)"
+  elif [ -n "$BASH_VERSION" ]; then
+    eval "$(starship init bash)"
+  fi
+fi
+
+###############################################################################
+# Profile-Specific Configuration
+###############################################################################
+
+if [ -f "$DOTFILES_DIR/profiles/$DOTFILES_PROFILE/aliases.sh" ]; then
+  . "$DOTFILES_DIR/profiles/$DOTFILES_PROFILE/aliases.sh"
+fi
+
+###############################################################################
+# Local Overrides
+###############################################################################
+
+# Machine-specific config (not tracked in git)
+if [ -n "$ZSH_VERSION" ]; then
+  [ -f "$HOME/.zshrc.local" ] && . "$HOME/.zshrc.local"
+elif [ -n "$BASH_VERSION" ]; then
+  [ -f "$HOME/.bashrc.local" ] && . "$HOME/.bashrc.local"
+fi

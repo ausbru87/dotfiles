@@ -2,7 +2,7 @@
 
 ###############################################################################
 # Dotfiles Installation Script
-# Symlinks configs and sets up oh-my-zsh + vim-plug.
+# Detects available shell (zsh/bash), symlinks configs, sets up plugins.
 # Does NOT install tools — manage those with your package manager.
 #
 # Usage:
@@ -25,10 +25,38 @@ log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 
 ###############################################################################
-# Oh-My-Zsh + Plugins
+# Shell Detection
+###############################################################################
+
+detect_shell() {
+  HAS_ZSH=false
+  HAS_BASH=false
+
+  command -v zsh  &>/dev/null && HAS_ZSH=true
+  command -v bash &>/dev/null && HAS_BASH=true
+
+  if $HAS_ZSH; then
+    SHELL_NAME="zsh"
+  elif $HAS_BASH; then
+    SHELL_NAME="bash"
+  else
+    log_warning "Neither zsh nor bash found — symlinking bash config as fallback"
+    SHELL_NAME="bash"
+  fi
+
+  log_info "Detected shell: $SHELL_NAME (zsh=$HAS_ZSH, bash=$HAS_BASH)"
+}
+
+###############################################################################
+# Oh-My-Zsh + Plugins (zsh only)
 ###############################################################################
 
 install_ohmyzsh() {
+  if ! $HAS_ZSH; then
+    log_info "Skipping oh-my-zsh (zsh not found)"
+    return
+  fi
+
   if [[ -d "$HOME/.oh-my-zsh" ]]; then
     log_info "oh-my-zsh already installed"
   else
@@ -83,8 +111,16 @@ safe_symlink() {
 create_symlinks() {
   log_info "Creating symlinks..."
 
-  # Shell
-  safe_symlink "$DOTFILES_DIR/core/.zshrc" "$HOME/.zshrc"
+  # Shared shell config
+  safe_symlink "$DOTFILES_DIR/core/.shellrc" "$HOME/.shellrc"
+
+  # Shell RC — symlink based on what's available
+  if $HAS_ZSH; then
+    safe_symlink "$DOTFILES_DIR/core/.zshrc" "$HOME/.zshrc"
+  fi
+  if $HAS_BASH; then
+    safe_symlink "$DOTFILES_DIR/core/.bashrc" "$HOME/.bashrc"
+  fi
 
   # Git
   safe_symlink "$DOTFILES_DIR/core/.gitconfig" "$HOME/.gitconfig"
@@ -123,6 +159,9 @@ main() {
   log_info "Installing dotfiles..."
   echo ""
 
+  detect_shell
+  echo ""
+
   install_ohmyzsh
   echo ""
 
@@ -132,7 +171,7 @@ main() {
   create_symlinks
   echo ""
 
-  log_success "Done! Restart your shell or: source ~/.zshrc"
+  log_success "Done! Restart your shell or: source ~/.$SHELL_NAME rc"
   echo "  Run :PlugInstall in vim to install plugins."
   echo ""
 }
