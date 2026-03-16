@@ -2,12 +2,14 @@
 
 ###############################################################################
 # Dotfiles Installation Script
-# Detects available shell (zsh/bash), symlinks configs, sets up plugins.
-# Does NOT install tools — manage those with your package manager.
+# Installs minimal dependencies, symlinks configs, sets up shell/vim/tmux plugins.
 #
 # Usage:
 #   ./install.sh        # Interactive mode
 #   ./install.sh -y     # Non-interactive mode (Coder/CI)
+#
+# Environment variables:
+#   DOTFILES_SKIP_INSTALL=1  # Skip package installs (symlinks + plugins only)
 ###############################################################################
 
 set -e
@@ -18,11 +20,120 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
 log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
+
+###############################################################################
+# Environment Detection
+###############################################################################
+
+detect_environment() {
+  OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  ARCH="$(uname -m)"
+
+  if command -v brew &>/dev/null; then
+    PKG_MGR="brew"
+  elif command -v apt-get &>/dev/null; then
+    PKG_MGR="apt"
+  elif command -v dnf &>/dev/null; then
+    PKG_MGR="dnf"
+  elif command -v yum &>/dev/null; then
+    PKG_MGR="yum"
+  else
+    PKG_MGR="none"
+  fi
+
+  [[ "${1:-}" == "-y" || -n "${CODER_WORKSPACE_NAME:-}" ]] && NONINTERACTIVE=1
+
+  log_info "OS: $OS ($ARCH) | Package manager: $PKG_MGR"
+}
+
+###############################################################################
+# Package Installation Helpers
+###############################################################################
+
+install_if_missing() {
+  local cmd="$1"
+  local pkg="${2:-$1}"
+
+  command -v "$cmd" &>/dev/null && return 0
+
+  log_info "Installing $pkg..."
+  case "$PKG_MGR" in
+    brew) brew install "$pkg" ;;
+    apt)  sudo apt-get install -y "$pkg" ;;
+    dnf)  sudo dnf install -y "$pkg" ;;
+    yum)  sudo yum install -y "$pkg" ;;
+    *)    log_warning "Cannot install $pkg — no supported package manager"; return 1 ;;
+  esac
+}
+
+###############################################################################
+# Minimal Tool Installation
+# Only what the dotfiles configs actually depend on.
+###############################################################################
+
+install_packages() {
+  if [[ "${DOTFILES_SKIP_INSTALL:-}" == "1" ]]; then
+    log_info "Skipping package installs (DOTFILES_SKIP_INSTALL=1)"
+    return
+  fi
+
+  log_info "Installing dependencies..."
+
+  # Update package list (apt only, once)
+  [[ "$PKG_MGR" == "apt" ]] && sudo apt-get update -qq
+
+  # Shells & multiplexer
+  install_if_missing zsh
+  install_if_missing tmux
+
+  # Editors
+  install_if_missing vim
+  install_if_missing nvim neovim 2>/dev/null || true
+
+  # Git (needed by oh-my-zsh, vim-fugitive, TPM)
+  install_if_missing git
+  install_if_missing curl
+
+  # Search tools (used by .shellrc, .vimrc fzf.vim :Rg, :Files)
+  install_if_missing fzf
+  install_if_missing rg ripgrep
+
+  # fd (used by FZF_DEFAULT_COMMAND in .shellrc)
+  if ! command -v fd &>/dev/null && ! command -v fdfind &>/dev/null; then
+    case "$PKG_MGR" in
+      brew) brew install fd ;;
+      apt)  sudo apt-get install -y fd-find ;;
+      dnf|yum) sudo "$PKG_MGR" install -y fd-find ;;
+    esac
+  fi
+
+  # jq (general-purpose, tiny)
+  install_if_missing jq
+
+  # Clipboard support for tmux copy-mode on Linux
+  if [[ "$OS" == "linux" ]]; then
+    install_if_missing xclip 2>/dev/null || true
+  fi
+
+  # Starship prompt
+  if ! command -v starship &>/dev/null; then
+    log_info "Installing starship..."
+    if [[ "$PKG_MGR" == "brew" ]]; then
+      brew install starship
+    else
+      curl -sS https://starship.rs/install.sh | sh -s -- -y
+    fi
+  fi
+
+  log_success "Dependencies installed"
+}
 
 ###############################################################################
 # Shell Detection
@@ -37,10 +148,7 @@ detect_shell() {
 
   if $HAS_ZSH; then
     SHELL_NAME="zsh"
-  elif $HAS_BASH; then
-    SHELL_NAME="bash"
   else
-    log_warning "Neither zsh nor bash found — symlinking bash config as fallback"
     SHELL_NAME="bash"
   fi
 
@@ -89,6 +197,20 @@ install_vim_plug() {
     log_success "vim-plug installed (run :PlugInstall in vim)"
   else
     log_info "vim-plug already installed"
+  fi
+}
+
+###############################################################################
+# TPM (Tmux Plugin Manager)
+###############################################################################
+
+install_tpm() {
+  if [[ -d "$HOME/.tmux/plugins/tpm" ]]; then
+    log_info "TPM already installed"
+  else
+    log_info "Installing TPM..."
+    git clone --depth=1 https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+    log_success "TPM installed (prefix + I in tmux to install plugins)"
   fi
 }
 
@@ -159,6 +281,12 @@ main() {
   log_info "Installing dotfiles..."
   echo ""
 
+  detect_environment "$@"
+  echo ""
+
+  install_packages
+  echo ""
+
   detect_shell
   echo ""
 
@@ -168,11 +296,15 @@ main() {
   install_vim_plug
   echo ""
 
+  install_tpm
+  echo ""
+
   create_symlinks
   echo ""
 
   log_success "Done! Restart your shell or: source ~/.$SHELL_NAME rc"
-  echo "  Run :PlugInstall in vim to install plugins."
+  echo "  - Run :PlugInstall in vim to install plugins"
+  echo "  - Run prefix + I in tmux to install plugins"
   echo ""
 }
 

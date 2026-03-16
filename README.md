@@ -9,7 +9,11 @@ git clone git@gitlab.zambruhni.com:lab/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles && ./install.sh
 ```
 
-The install script symlinks configs and sets up shell plugins (oh-my-zsh for zsh, bash-completion for bash) + vim-plug. It does **not** install tools — manage those with your package manager.
+The install script installs minimal dependencies, symlinks configs, and sets up plugin managers (oh-my-zsh, vim-plug, TPM).
+
+### What Gets Installed
+
+zsh, tmux, vim, neovim, git, curl, fzf, ripgrep, fd, jq, starship, xclip (Linux). Skip with `DOTFILES_SKIP_INSTALL=1`.
 
 ## What's Included
 
