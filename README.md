@@ -5,7 +5,7 @@ Shell, editor, and git configuration for macOS and Linux. Works with **zsh** or 
 ## Install
 
 ```bash
-git clone git@gitlab.zambruhni.com:lab/dotfiles.git ~/.dotfiles
+git clone https://github.com/ausbru87/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles && ./install.sh
 ```
 
