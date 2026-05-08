@@ -1,9 +1,6 @@
 # dotfiles — `demo` branch
 
-Minimal dotfiles used by the Coder sales-demo templates:
-
-- [`lab/coder-templates` / `demo-ai-gov-no-firewall`](https://gitlab.zambruhni.com/lab/coder-templates/-/tree/main/templates/demo-ai-gov-no-firewall)
-- [`lab/coder-templates` / `demo-ai-governance`](https://gitlab.zambruhni.com/lab/coder-templates/-/tree/main/templates/demo-ai-governance)
+Minimal dotfiles used by the Coder sales-demo templates.
 
 ## What's in here
 
