@@ -6,7 +6,7 @@ Multi-profile dotfiles for macOS, Linux, and Coder workspaces.
 
 ```bash
 # Clone and install
-git clone https://github.com/YOUR_USERNAME/dotfiles.git ~/.dotfiles
+git clone https://github.com/ausbru87/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles && ./install.sh
 ```
 
