@@ -135,12 +135,18 @@ install_packages() {
   fi
 
   # Starship prompt
+  #
+  # Default starship installer writes to /usr/local/bin which needs
+  # sudo. In a no-sudo environment (e.g., OpenShift restricted-v2 pod
+  # where CAP_SETUID is dropped) that fails. Install to ~/.local/bin
+  # instead — already on PATH per .shellrc.
   if ! command -v starship &>/dev/null; then
     log_info "Installing starship..."
     if [[ "$PKG_MGR" == "brew" ]]; then
       brew install starship
     else
-      curl -sS https://starship.rs/install.sh | sh -s -- -y
+      mkdir -p "$HOME/.local/bin"
+      curl -sS https://starship.rs/install.sh | sh -s -- -y --bin-dir "$HOME/.local/bin"
     fi
   fi
 
@@ -179,9 +185,21 @@ set_default_shell() {
   local zsh_path
   zsh_path="$(command -v zsh)"
 
-  # Already set to zsh
+  # Already set to zsh — typical in container images that pre-set
+  # ENV SHELL=/usr/bin/zsh (e.g., the OCP workspace base image).
   if [[ "$SHELL" == "$zsh_path" ]]; then
     log_info "Default shell already set to zsh"
+    return
+  fi
+
+  # Skip the sudo-requiring path entirely if sudo isn't usable
+  # (no-sudo environments include OCP restricted-v2 pods, where
+  # CAP_SETUID is dropped and sudo can't elevate). Set $SHELL for
+  # this session so login shells inherit it; that's the best we can
+  # do without `chsh`.
+  if ! sudo -n true 2>/dev/null; then
+    log_warning "sudo unavailable — skipping chsh; exporting SHELL=$zsh_path for this session"
+    export SHELL="$zsh_path"
     return
   fi
 
@@ -192,7 +210,7 @@ set_default_shell() {
   fi
 
   log_info "Setting default shell to zsh..."
-  sudo chsh -s "$zsh_path" "$(whoami)"
+  sudo chsh -s "$zsh_path" "$(whoami)" || log_warning "chsh failed; SHELL stays as-is"
   log_success "Default shell set to zsh"
 }
 
