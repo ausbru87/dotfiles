@@ -57,6 +57,10 @@ detect_environment() {
 # Package Installation Helpers
 ###############################################################################
 
+# Best-effort: a failed package install logs a warning and returns 0, so it
+# never aborts the script (set -e) or marks a Coder workspace as failed.
+# The DPkg::Lock::Timeout lets apt wait for the lock instead of erroring when
+# the workspace's own startup scripts are running apt at the same time.
 install_if_missing() {
   local cmd="$1"
   local pkg="${2:-$1}"
@@ -64,13 +68,20 @@ install_if_missing() {
   command -v "$cmd" &>/dev/null && return 0
 
   log_info "Installing $pkg..."
+  local rc=0
   case "$PKG_MGR" in
-    brew) brew install "$pkg" ;;
-    apt)  sudo apt-get install -y "$pkg" ;;
-    dnf)  sudo dnf install -y "$pkg" ;;
-    yum)  sudo yum install -y "$pkg" ;;
-    *)    log_warning "Cannot install $pkg — no supported package manager"; return 1 ;;
+    brew) brew install "$pkg" || rc=$? ;;
+    apt)  sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=300 install -y "$pkg" || rc=$? ;;
+    dnf)  sudo dnf install -y "$pkg" || rc=$? ;;
+    yum)  sudo yum install -y "$pkg" || rc=$? ;;
+    *)    log_warning "Cannot install $pkg — no supported package manager"; return 0 ;;
   esac
+
+  if [[ "$rc" -ne 0 ]]; then
+    log_warning "Failed to install $pkg (continuing)"
+    return 0
+  fi
+  log_success "Installed $pkg"
 }
 
 ###############################################################################
@@ -86,19 +97,26 @@ install_packages() {
 
   log_info "Installing dependencies..."
 
-  # Update package list (apt only)
+  # Update package list (apt only). Many base images (e.g. Coder's
+  # codercom/enterprise-base) ship with empty /var/lib/apt/lists, so this
+  # update MUST succeed before any install or apt can't locate packages.
   if [[ "$PKG_MGR" == "apt" ]]; then
-    # Fix stale third-party GPG keys that cause apt-get update to warn/fail.
-    # Capture missing keys from a dry run and import them.
-    local missing_keys
-    missing_keys=$(sudo apt-get update 2>&1 | grep -oP 'NO_PUBKEY \K[0-9A-F]+' | sort -u) || true
-    if [[ -n "$missing_keys" ]]; then
+    export DEBIAN_FRONTEND=noninteractive
+    log_info "Updating apt package lists..."
+    # DPkg::Lock::Timeout waits for the dpkg lock instead of failing when the
+    # workspace's own startup scripts are running apt concurrently.
+    if ! sudo apt-get -o DPkg::Lock::Timeout=300 update 2>/tmp/dotfiles-apt-update.err; then
+      # Recover from stale third-party GPG keys (NO_PUBKEY), then retry once.
+      local missing_keys
+      missing_keys=$(grep -oP 'NO_PUBKEY \K[0-9A-F]+' /tmp/dotfiles-apt-update.err | sort -u) || true
       for key in $missing_keys; do
         log_info "Importing missing apt GPG key: $key"
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$key" 2>/dev/null || true
       done
-      sudo apt-get update -qq
+      sudo apt-get -o DPkg::Lock::Timeout=300 update -qq 2>/dev/null \
+        || log_warning "apt-get update failed; some packages may be unavailable (continuing)"
     fi
+    rm -f /tmp/dotfiles-apt-update.err
   fi
 
   # Shells & multiplexer
@@ -120,9 +138,9 @@ install_packages() {
   # fd (used by FZF_DEFAULT_COMMAND in .shellrc)
   if ! command -v fd &>/dev/null && ! command -v fdfind &>/dev/null; then
     case "$PKG_MGR" in
-      brew) brew install fd ;;
-      apt)  sudo apt-get install -y fd-find ;;
-      dnf|yum) sudo "$PKG_MGR" install -y fd-find ;;
+      brew) brew install fd || log_warning "fd install failed (continuing)" ;;
+      apt)  sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=300 install -y fd-find || log_warning "fd-find install failed (continuing)" ;;
+      dnf|yum) sudo "$PKG_MGR" install -y fd-find || log_warning "fd-find install failed (continuing)" ;;
     esac
   fi
 
@@ -343,22 +361,25 @@ main() {
   detect_environment "$@"
   echo ""
 
-  install_packages
+  # Tool/plugin installs are best-effort: a failure (no sudo, no network,
+  # apt locked) must not abort the run or mark a Coder workspace as failed.
+  # Symlinking the configs below is the core job and always runs.
+  install_packages   || log_warning "package install phase had issues (continuing)"
   echo ""
 
   detect_shell
   echo ""
 
-  set_default_shell
+  set_default_shell  || log_warning "set_default_shell had issues (continuing)"
   echo ""
 
-  install_ohmyzsh
+  install_ohmyzsh    || log_warning "oh-my-zsh phase had issues (continuing)"
   echo ""
 
-  install_vim_plug
+  install_vim_plug   || log_warning "vim-plug phase had issues (continuing)"
   echo ""
 
-  install_tpm
+  install_tpm        || log_warning "tpm phase had issues (continuing)"
   echo ""
 
   create_symlinks

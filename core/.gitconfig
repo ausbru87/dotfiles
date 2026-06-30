@@ -1,12 +1,12 @@
 # ~/.gitconfig
 # Global Git configuration
 
-[user]
-  # Update these with your actual information:
-  # git config --global user.name "Your Name"
-  # git config --global user.email "your.email@example.com"
-  name = YOUR_NAME
-  email = YOUR_EMAIL
+# Identity is intentionally NOT set here — a committed name/email would author
+# every clone's commits as that identity. Set it per-machine in
+# ~/.gitconfig.local (loaded via the [include] at the bottom of this file):
+#   git config --file ~/.gitconfig.local user.name  "Your Name"
+#   git config --file ~/.gitconfig.local user.email "you@example.com"
+# In Coder workspaces the git-config module sets it from your Coder identity.
 
 [core]
   editor = vim
