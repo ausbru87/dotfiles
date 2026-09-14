@@ -38,6 +38,13 @@ if [ -z "$DOTFILES_PROFILE" ]; then
 fi
 export DOTFILES_PROFILE
 
+# DOTFILES_PROFILES takes a space-separated list for hosts that wear more than
+# one hat -- a GPU box doing both Kubernetes and ML work, say. It defaults to
+# the single auto-detected profile, so machines that set only DOTFILES_PROFILE
+# behave exactly as before.
+DOTFILES_PROFILES="${DOTFILES_PROFILES:-$DOTFILES_PROFILE}"
+export DOTFILES_PROFILES
+
 ###############################################################################
 # PATH
 ###############################################################################
@@ -142,9 +149,12 @@ fi
 # Profile-Specific Configuration
 ###############################################################################
 
-if [ -f "$DOTFILES_DIR/profiles/$DOTFILES_PROFILE/aliases.sh" ]; then
-  . "$DOTFILES_DIR/profiles/$DOTFILES_PROFILE/aliases.sh"
-fi
+for _dotfiles_profile in $DOTFILES_PROFILES; do
+  if [ -f "$DOTFILES_DIR/profiles/$_dotfiles_profile/aliases.sh" ]; then
+    . "$DOTFILES_DIR/profiles/$_dotfiles_profile/aliases.sh"
+  fi
+done
+unset _dotfiles_profile
 
 ###############################################################################
 # Local Overrides

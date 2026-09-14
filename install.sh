@@ -152,6 +152,17 @@ install_packages() {
     install_if_missing xclip 2>/dev/null || true
   fi
 
+  # Modern CLI replacements. .shellrc already aliases these (including the
+  # bat -> batcat and fd -> fdfind renames Debian applies), but nothing was
+  # installing them, so a fresh Linux box got the aliases without the tools.
+  install_if_missing eza
+  install_if_missing bat
+  install_if_missing zoxide
+  install_if_missing atuin
+  install_if_missing delta git-delta
+  install_if_missing yq
+  install_if_missing htop
+
   # Starship prompt
   #
   # Default starship installer writes to /usr/local/bin which needs
