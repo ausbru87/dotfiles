@@ -9,14 +9,14 @@
 # In Coder workspaces the git-config module sets it from your Coder identity.
 
 [core]
-  editor = vim
+  editor = nvim
   whitespace = fix,-indent-with-non-tab,trailing-space,cr-at-eol
-  pager = less -FRX
+  # delta when installed (base profile); plain less on hosts without it
+  pager = command -v delta >/dev/null 2>&1 && exec delta || exec less -FRX
   excludesfile = ~/.gitignore_global
   autocrlf = input
   # Improve performance for large repos
   preloadindex = true
-  fscache = true
 
 [init]
   defaultBranch = main
@@ -38,13 +38,20 @@
   autoSquash = true
 
 [merge]
-  conflictStyle = diff3
+  conflictStyle = zdiff3
   ff = false
 
 [diff]
   colorMoved = zebra
   algorithm = histogram
-  tool = vimdiff
+  tool = nvimdiff
+
+[interactive]
+  diffFilter = command -v delta >/dev/null 2>&1 && exec delta --color-only || exec cat
+
+[delta]
+  navigate = true
+  line-numbers = true
 
 [commit]
   template = ~/.gitmessage
@@ -176,9 +183,6 @@
 [help]
   autocorrect = 10
 
-[credential]
-  helper = cache --timeout=3600
-
 [grep]
   lineNumber = true
   extendedRegexp = true
@@ -187,11 +191,8 @@
 # GitHub/GitLab Configuration
 ###############################################################################
 
-[github]
-  user = YOUR_GITHUB_USERNAME
-
-[gitlab]
-  user = YOUR_GITLAB_USERNAME
+# Set per machine in ~/.gitconfig.local if a tool needs them:
+#   git config --file ~/.gitconfig.local github.user <name>
 
 ###############################################################################
 # GPG Signing (Optional - Uncomment if you use GPG signing)

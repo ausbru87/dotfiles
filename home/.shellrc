@@ -19,30 +19,25 @@ else
 fi
 
 ###############################################################################
-# Profile Auto-Detection
+# Profiles
 ###############################################################################
 
-DOTFILES_PROFILE="${DOTFILES_PROFILE:-}"
-
-if [ -z "$DOTFILES_PROFILE" ]; then
-  case "${CODER_WORKSPACE_NAME:-}${PWD}" in
-    *devops*|*infra*|*k8s*|*terraform*|*ansible*)
-      DOTFILES_PROFILE="devops" ;;
-    *java*|*spring*|*jvm*|*maven*|*gradle*)
-      DOTFILES_PROFILE="java" ;;
-    *ml*|*ai*|*jupyter*|*notebook*|*pytorch*|*tensorflow*)
-      DOTFILES_PROFILE="ml" ;;
-    *)
-      DOTFILES_PROFILE="devops" ;;
-  esac
+# The profiles chosen at install time (./install.sh --profiles ...) are saved
+# to ~/.config/dotfiles/profiles; LazyVim reads the same file. DOTFILES_PROFILES
+# (space-separated) or the older single DOTFILES_PROFILE overrides it, e.g.
+# from a Coder template.
+if [ -z "${DOTFILES_PROFILES:-}" ]; then
+  if [ -n "${DOTFILES_PROFILE:-}" ]; then
+    DOTFILES_PROFILES="$DOTFILES_PROFILE"
+  elif [ -f "$HOME/.config/dotfiles/profiles" ]; then
+    DOTFILES_PROFILES="$(cat "$HOME/.config/dotfiles/profiles")"
+  fi
 fi
-export DOTFILES_PROFILE
-
-# DOTFILES_PROFILES takes a space-separated list for hosts that wear more than
-# one hat -- a GPU box doing both Kubernetes and ML work, say. It defaults to
-# the single auto-detected profile, so machines that set only DOTFILES_PROFILE
-# behave exactly as before.
-DOTFILES_PROFILES="${DOTFILES_PROFILES:-$DOTFILES_PROFILE}"
+# "devops" was split into k8s and iac
+case " ${DOTFILES_PROFILES:-} " in
+  *" devops "*) DOTFILES_PROFILES="$DOTFILES_PROFILES k8s iac" ;;
+esac
+DOTFILES_PROFILES="base ${DOTFILES_PROFILES:-}"
 export DOTFILES_PROFILES
 
 ###############################################################################
@@ -57,9 +52,21 @@ if [ "$DOTFILES_OS" = "darwin" ]; then
   fi
 fi
 
-[ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"
-[ -d "$HOME/bin" ] && export PATH="$HOME/bin:$PATH"
+# Prepended in increasing priority: the last one added wins.
 [ -d "/usr/local/bin" ] && export PATH="/usr/local/bin:$PATH"
+[ -d "$HOME/bin" ] && export PATH="$HOME/bin:$PATH"
+[ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"
+
+# mise installs the profile CLI tools. Shims (rather than `mise activate`)
+# also work for programs that don't run this file -- git calling delta,
+# nvim's mason calling node.
+export MISE_DATA_DIR="${MISE_DATA_DIR:-$HOME/.local/share/mise}"
+[ -d "$MISE_DATA_DIR/shims" ] && export PATH="$MISE_DATA_DIR/shims:$PATH"
+
+[ -d /Applications/Ghostty.app ] && export PATH="$PATH:/Applications/Ghostty.app/Contents/MacOS"
+
+export EDITOR='nvim'
+export VISUAL='nvim'
 
 ###############################################################################
 # Platform-Specific Aliases
