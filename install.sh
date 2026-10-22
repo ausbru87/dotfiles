@@ -322,34 +322,34 @@ create_symlinks() {
   log_info "Creating symlinks..."
 
   # Shared shell config
-  safe_symlink "$DOTFILES_DIR/core/.shellrc" "$HOME/.shellrc"
+  safe_symlink "$DOTFILES_DIR/home/.shellrc" "$HOME/.shellrc"
 
   # Shell RC — symlink based on what's available
   if $HAS_ZSH; then
-    safe_symlink "$DOTFILES_DIR/core/.zshrc" "$HOME/.zshrc"
+    safe_symlink "$DOTFILES_DIR/home/.zshrc" "$HOME/.zshrc"
   fi
   if $HAS_BASH; then
-    safe_symlink "$DOTFILES_DIR/core/.bashrc" "$HOME/.bashrc"
+    safe_symlink "$DOTFILES_DIR/home/.bashrc" "$HOME/.bashrc"
   fi
 
   # Git
-  safe_symlink "$DOTFILES_DIR/core/.gitconfig" "$HOME/.gitconfig"
-  safe_symlink "$DOTFILES_DIR/core/.gitignore_global" "$HOME/.gitignore_global"
-  safe_symlink "$DOTFILES_DIR/core/.gitmessage" "$HOME/.gitmessage"
+  safe_symlink "$DOTFILES_DIR/home/.gitconfig" "$HOME/.gitconfig"
+  safe_symlink "$DOTFILES_DIR/home/.gitignore_global" "$HOME/.gitignore_global"
+  safe_symlink "$DOTFILES_DIR/home/.gitmessage" "$HOME/.gitmessage"
 
   # Tmux
-  safe_symlink "$DOTFILES_DIR/core/.tmux.conf" "$HOME/.tmux.conf"
+  safe_symlink "$DOTFILES_DIR/home/.tmux.conf" "$HOME/.tmux.conf"
 
   # Vim
-  safe_symlink "$DOTFILES_DIR/core/.vimrc" "$HOME/.vimrc"
+  safe_symlink "$DOTFILES_DIR/home/.vimrc" "$HOME/.vimrc"
 
-  # Neovim (use same vimrc)
-  mkdir -p "$HOME/.config/nvim"
-  safe_symlink "$DOTFILES_DIR/core/.vimrc" "$HOME/.config/nvim/init.vim"
+  # Neovim (LazyVim). Linking .vimrc as init.vim here would sit next to the
+  # LazyVim init.lua, and nvim refuses to start with both present.
+  safe_symlink "$DOTFILES_DIR/config/nvim" "$HOME/.config/nvim"
 
   # Starship
   mkdir -p "$HOME/.config"
-  safe_symlink "$DOTFILES_DIR/starship/starship.toml" "$HOME/.config/starship.toml"
+  safe_symlink "$DOTFILES_DIR/config/starship.toml" "$HOME/.config/starship.toml"
 
   # VS Code (if directory exists)
   if [[ -d "$HOME/.config/Code/User" ]]; then

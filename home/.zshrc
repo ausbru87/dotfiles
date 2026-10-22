@@ -57,4 +57,4 @@ command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
 # Shared configuration
 ###############################################################################
 
-source "$DOTFILES_DIR/core/.shellrc"
+source "$DOTFILES_DIR/home/.shellrc"
