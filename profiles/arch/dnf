@@ -1,0 +1,16 @@
+graphviz
+# Chromium libraries for mermaid-cli's headless browser
+nss
+atk
+at-spi2-atk
+cups-libs
+libdrm
+libxkbcommon
+libXcomposite
+libXdamage
+libXrandr
+mesa-libgbm
+pango
+cairo
+alsa-lib
+google-noto-emoji-color-fonts|google-noto-color-emoji-fonts

@@ -1,0 +1,5 @@
+# A container runtime for kind and local image builds. Linux hosts bring
+# their own (docker or podman).
+brew "colima"
+brew "docker"
+brew "docker-buildx"

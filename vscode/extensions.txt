@@ -1,6 +1,5 @@
 # VS Code Extensions
-# This list will be automatically installed by the install.sh script
-# Or manually install with: cat extensions.txt | xargs -L 1 code --install-extension
+# Not installed by install.sh; install with: cat extensions.txt | xargs -L 1 code --install-extension
 
 # Version Control
 eamodio.gitlens

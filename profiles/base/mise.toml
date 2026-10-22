@@ -1,0 +1,21 @@
+# Installed on every machine. "latest" resolves at install time; run
+# `mise upgrade` to move forward, or pin a version here.
+[tools]
+neovim = "latest"
+tree-sitter = "latest"   # nvim-treesitter builds parsers with it
+node = "lts"             # mason LSPs, mermaid-cli, CDK
+uv = "latest"            # also backs the pypi: tools in other profiles
+starship = "latest"
+fzf = "latest"
+ripgrep = "latest"
+fd = "latest"
+eza = "latest"
+bat = "latest"
+zoxide = "latest"
+atuin = "latest"
+delta = "latest"
+jq = "latest"
+yq = "latest"            # mikefarah/yq, not the apt python wrapper
+direnv = "latest"
+lazygit = "latest"
+gh = "latest"
