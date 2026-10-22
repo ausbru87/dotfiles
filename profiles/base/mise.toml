@@ -1,5 +1,12 @@
 # Installed on every machine. "latest" resolves at install time; run
 # `mise upgrade` to move forward, or pin a version here.
+
+[settings]
+# Install npm: tools (mermaid-cli, aws-cdk, typescript) with real npm. The
+# "auto" default picks mise's built-in resolver, which fails to resolve
+# @mermaid-js/mermaid-cli's dependency tree.
+npm.package_manager = "npm"
+
 [tools]
 neovim = "latest"
 tree-sitter = "latest"   # nvim-treesitter builds parsers with it

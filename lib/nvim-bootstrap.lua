@@ -9,7 +9,16 @@ local function log(msg)
   io.stdout:write(msg .. "\n")
 end
 
--- mason: tools listed by extras, plus their LSP servers
+local registry = require("mason-registry")
+local refreshed = false
+registry.refresh(function()
+  refreshed = true
+end)
+vim.wait(60000, function()
+  return refreshed
+end, 200)
+-- mason: tools listed by extras, plus their LSP servers. The server ->
+-- package map comes from the registry, so read it only after the refresh.
 local tools = vim.deepcopy(LazyVim.opts("mason.nvim").ensure_installed or {})
 local servers = LazyVim.opts("nvim-lspconfig").servers or {}
 local to_package = require("mason-lspconfig.mappings").get_mason_map().lspconfig_to_package
@@ -20,31 +29,41 @@ for name, sopts in pairs(servers) do
   end
 end
 
-local registry = require("mason-registry")
-local pending, failed = 0, {}
-registry.refresh(function()
-  for _, name in ipairs(tools) do
-    local ok, pkg = pcall(registry.get_package, name)
-    if ok and not pkg:is_installed() and not pkg:is_installing() then
-      pending = pending + 1
-      pkg:install({}, function(success)
-        if not success then
-          failed[#failed + 1] = name
-        end
-        pending = pending - 1
-      end)
+-- LazyVim starts installing its ensure_installed list on its own once the
+-- registry is ready. Give it a moment, then only start what it didn't, so
+-- neither side tries to install a package the other already has running.
+vim.wait(3000)
+
+local pkgs = {}
+for _, name in ipairs(tools) do
+  local ok, pkg = pcall(registry.get_package, name)
+  if ok then
+    pkgs[#pkgs + 1] = pkg
+    if not pkg:is_installed() and not pkg:is_installing() then
+      pcall(pkg.install, pkg)
     end
   end
-end)
-vim.wait(5000, function()
-  return pending > 0
-end, 200)
-log(("mason: %d package(s) to install"):format(pending))
+end
+local function busy()
+  for _, pkg in ipairs(pkgs) do
+    if pkg:is_installing() then
+      return true
+    end
+  end
+  return false
+end
+log(("mason: %d package(s) requested"):format(#pkgs))
 vim.wait(timeout, function()
-  return pending == 0
+  return not busy()
 end, 1000)
+local failed = {}
+for _, pkg in ipairs(pkgs) do
+  if not pkg:is_installed() then
+    failed[#failed + 1] = pkg.name
+  end
+end
 if #failed > 0 then
-  log("mason: failed: " .. table.concat(failed, ", "))
+  log("mason: not installed: " .. table.concat(failed, ", "))
 end
 
 -- treesitter parsers
