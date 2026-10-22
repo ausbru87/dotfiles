@@ -1,0 +1,3 @@
+[tools]
+"npm:@mermaid-js/mermaid-cli" = "latest"   # mmdc; nvim renders mermaid with it
+d2 = "latest"

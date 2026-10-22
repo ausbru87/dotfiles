@@ -1,0 +1,11 @@
+[tools]
+terraform = "latest"
+tflint = "latest"
+terraform-docs = "latest"
+ansible = "latest"
+"pypi:ansible-lint" = "latest"
+argocd = "latest"
+sops = "latest"
+age = "latest"
+pre-commit = "latest"
+trivy = "latest"

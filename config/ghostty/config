@@ -1,0 +1,22 @@
+# Ghostty (macOS and Linux). Full reference: ghostty +show-config --default --docs
+
+# Nerd Font for eza/starship/LazyVim icons (installed by the base Brewfile)
+font-family = JetBrainsMono Nerd Font
+font-size = 14
+
+# Matches LazyVim's default colorscheme
+theme = TokyoNight Night
+
+window-padding-x = 6
+window-padding-y = 4
+window-save-state = always
+
+# Option works as Alt in the shell and nvim (Alt-C for fzf, Alt-arrows in tmux)
+macos-option-as-alt = left
+
+# Prompt marks, cursor shape, title; ssh-terminfo copies Ghostty's terminfo
+# to hosts you ssh into, so remote tmux/nvim don't see an unknown TERM
+shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
+
+copy-on-select = clipboard
+mouse-hide-while-typing = true

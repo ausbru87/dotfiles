@@ -92,7 +92,8 @@ fi
 
 # NVIDIA GPU monitoring
 if command -v nvidia-smi &>/dev/null; then
-  alias nv='nvidia-smi'
+  # nvs, not nv: nv is nvim in the shared aliases
+  alias nvs='nvidia-smi'
   alias nvw='watch -n 1 nvidia-smi'
   alias nvt='nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader'
 

@@ -1,0 +1,4 @@
+# Upstream publishes kubeadm for Linux only. kubelet and the container
+# runtime are node services: install them with the distro's packages.
+[tools]
+"aqua:kubernetes/kubernetes/kubeadm" = "latest"

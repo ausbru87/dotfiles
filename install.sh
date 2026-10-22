@@ -1,405 +1,141 @@
 #!/usr/bin/env bash
-
 ###############################################################################
-# Dotfiles Installation Script
-# Installs minimal dependencies, symlinks configs, sets up shell/vim/tmux plugins.
+# Dotfiles installer: shell, tmux, LazyVim, and per-profile toolsets on
+# macOS, Debian/Ubuntu and Fedora/RHEL. Safe to re-run.
 #
 # Usage:
-#   ./install.sh        # Interactive mode
-#   ./install.sh -y     # Non-interactive mode (Coder/CI)
+#   ./install.sh                         # pick profiles interactively
+#   ./install.sh --profiles k8s,iac,ai   # or name them
+#   ./install.sh --preset workstation    # or use a preset
+#   ./install.sh -y                      # non-interactive: saved profiles
+#   ./install.sh --list                  # show profiles and presets
 #
-# Environment variables:
-#   DOTFILES_SKIP_INSTALL=1  # Skip package installs (symlinks + plugins only)
+# Options:
+#   --profiles a,b   Profiles to install (replaces the saved selection)
+#   --preset NAME    workstation | server | k8s-node
+#   -y, --yes        Never prompt (also implied in Coder workspaces)
+#   --dry-run        Print what would be done, change nothing
+#   --link-only      Only link configs (no packages or tools)
+#   --no-sudo        Skip system packages even if sudo works
+#   -h, --help
+#
+# Environment:
+#   DOTFILES_PROFILES="k8s iac"  Default profiles for -y when none are saved
+#   DOTFILES_SKIP_INSTALL=1      Same as --link-only
+#   GITHUB_TOKEN                 Avoids GitHub API rate limits for mise
 ###############################################################################
 
-set -e
+# No -u: macOS ships bash 3.2, where expanding an empty array under -u is an
+# "unbound variable" error.
+set -eo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export DOTFILES_DIR
 
-# Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+# shellcheck source=lib/common.sh
+source "$DOTFILES_DIR/lib/common.sh"
+# shellcheck source=lib/profiles.sh
+source "$DOTFILES_DIR/lib/profiles.sh"
+# shellcheck source=lib/link.sh
+source "$DOTFILES_DIR/lib/link.sh"
+# shellcheck source=lib/tools.sh
+source "$DOTFILES_DIR/lib/tools.sh"
 
-log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
-log_warning() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
+usage() { sed -n '3,27p' "$0" | sed 's/^# \{0,1\}//'; }
 
-###############################################################################
-# Environment Detection
-###############################################################################
+REQUESTED=""
+HAVE_REQUEST=0
+DRY_RUN=0
+LINK_ONLY=0
+NONINTERACTIVE=0
+[[ -n "${CODER_WORKSPACE_NAME:-}" ]] && NONINTERACTIVE=1
+[[ "${DOTFILES_SKIP_INSTALL:-}" == 1 ]] && LINK_ONLY=1
 
-detect_environment() {
-  OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-  ARCH="$(uname -m)"
-
-  if command -v brew &>/dev/null; then
-    PKG_MGR="brew"
-  elif command -v apt-get &>/dev/null; then
-    PKG_MGR="apt"
-  elif command -v dnf &>/dev/null; then
-    PKG_MGR="dnf"
-  elif command -v yum &>/dev/null; then
-    PKG_MGR="yum"
-  else
-    PKG_MGR="none"
-  fi
-
-  [[ "${1:-}" == "-y" || -n "${CODER_WORKSPACE_NAME:-}" ]] && NONINTERACTIVE=1
-
-  log_info "OS: $OS ($ARCH) | Package manager: $PKG_MGR"
-}
-
-###############################################################################
-# Package Installation Helpers
-###############################################################################
-
-# Best-effort: a failed package install logs a warning and returns 0, so it
-# never aborts the script (set -e) or marks a Coder workspace as failed.
-# The DPkg::Lock::Timeout lets apt wait for the lock instead of erroring when
-# the workspace's own startup scripts are running apt at the same time.
-install_if_missing() {
-  local cmd="$1"
-  local pkg="${2:-$1}"
-
-  command -v "$cmd" &>/dev/null && return 0
-
-  log_info "Installing $pkg..."
-  local rc=0
-  case "$PKG_MGR" in
-    brew) brew install "$pkg" || rc=$? ;;
-    apt)  sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=300 install -y "$pkg" || rc=$? ;;
-    dnf)  sudo dnf install -y "$pkg" || rc=$? ;;
-    yum)  sudo yum install -y "$pkg" || rc=$? ;;
-    *)    log_warning "Cannot install $pkg — no supported package manager"; return 0 ;;
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --profiles) REQUESTED="${2:-}"; REQUESTED="${REQUESTED//,/ }"; HAVE_REQUEST=1; shift ;;
+    --profiles=*) REQUESTED="${1#*=}"; REQUESTED="${REQUESTED//,/ }"; HAVE_REQUEST=1 ;;
+    --preset | --preset=*)
+      if [[ "$1" == --preset ]]; then name="${2:-}"; shift; else name="${1#*=}"; fi
+      REQUESTED="$(preset_profiles "$name")" || { log_error "Unknown preset '$name'"; exit 1; }
+      HAVE_REQUEST=1 ;;
+    -y | --yes) NONINTERACTIVE=1 ;;
+    --dry-run) DRY_RUN=1 ;;
+    --link-only) LINK_ONLY=1 ;;
+    --no-sudo) NO_SUDO=1 ;;
+    --list) detect_platform; list_profiles; exit 0 ;;
+    -h | --help) usage; exit 0 ;;
+    *) log_error "Unknown option: $1"; usage; exit 1 ;;
   esac
-
-  if [[ "$rc" -ne 0 ]]; then
-    log_warning "Failed to install $pkg (continuing)"
-    return 0
-  fi
-  log_success "Installed $pkg"
-}
-
-###############################################################################
-# Minimal Tool Installation
-# Only what the dotfiles configs actually depend on.
-###############################################################################
-
-install_packages() {
-  if [[ "${DOTFILES_SKIP_INSTALL:-}" == "1" ]]; then
-    log_info "Skipping package installs (DOTFILES_SKIP_INSTALL=1)"
-    return
-  fi
-
-  log_info "Installing dependencies..."
-
-  # Update package list (apt only). Many base images (e.g. Coder's
-  # codercom/enterprise-base) ship with empty /var/lib/apt/lists, so this
-  # update MUST succeed before any install or apt can't locate packages.
-  if [[ "$PKG_MGR" == "apt" ]]; then
-    export DEBIAN_FRONTEND=noninteractive
-    log_info "Updating apt package lists..."
-    # DPkg::Lock::Timeout waits for the dpkg lock instead of failing when the
-    # workspace's own startup scripts are running apt concurrently.
-    if ! sudo apt-get -o DPkg::Lock::Timeout=300 update 2>/tmp/dotfiles-apt-update.err; then
-      # Recover from stale third-party GPG keys (NO_PUBKEY), then retry once.
-      local missing_keys
-      missing_keys=$(grep -oP 'NO_PUBKEY \K[0-9A-F]+' /tmp/dotfiles-apt-update.err | sort -u) || true
-      for key in $missing_keys; do
-        log_info "Importing missing apt GPG key: $key"
-        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$key" 2>/dev/null || true
-      done
-      sudo apt-get -o DPkg::Lock::Timeout=300 update -qq 2>/dev/null \
-        || log_warning "apt-get update failed; some packages may be unavailable (continuing)"
-    fi
-    rm -f /tmp/dotfiles-apt-update.err
-  fi
-
-  # Shells & multiplexer
-  install_if_missing zsh
-  install_if_missing tmux
-
-  # Editors
-  install_if_missing vim
-  install_if_missing nvim neovim 2>/dev/null || true
-
-  # Git (needed by oh-my-zsh, vim-fugitive, TPM)
-  install_if_missing git
-  install_if_missing curl
-
-  # Search tools (used by .shellrc, .vimrc fzf.vim :Rg, :Files)
-  install_if_missing fzf
-  install_if_missing rg ripgrep
-
-  # fd (used by FZF_DEFAULT_COMMAND in .shellrc)
-  if ! command -v fd &>/dev/null && ! command -v fdfind &>/dev/null; then
-    case "$PKG_MGR" in
-      brew) brew install fd || log_warning "fd install failed (continuing)" ;;
-      apt)  sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=300 install -y fd-find || log_warning "fd-find install failed (continuing)" ;;
-      dnf|yum) sudo "$PKG_MGR" install -y fd-find || log_warning "fd-find install failed (continuing)" ;;
-    esac
-  fi
-
-  # jq (general-purpose, tiny)
-  install_if_missing jq
-
-  # Clipboard support for tmux copy-mode on Linux
-  if [[ "$OS" == "linux" ]]; then
-    install_if_missing xclip 2>/dev/null || true
-  fi
-
-  # Modern CLI replacements. .shellrc already aliases these (including the
-  # bat -> batcat and fd -> fdfind renames Debian applies), but nothing was
-  # installing them, so a fresh Linux box got the aliases without the tools.
-  install_if_missing eza
-  install_if_missing bat
-  install_if_missing zoxide
-  install_if_missing atuin
-  install_if_missing delta git-delta
-  install_if_missing yq
-  install_if_missing htop
-
-  # Starship prompt
-  #
-  # Default starship installer writes to /usr/local/bin which needs
-  # sudo. In a no-sudo environment (e.g., OpenShift restricted-v2 pod
-  # where CAP_SETUID is dropped) that fails. Install to ~/.local/bin
-  # instead — already on PATH per .shellrc.
-  if ! command -v starship &>/dev/null; then
-    log_info "Installing starship..."
-    if [[ "$PKG_MGR" == "brew" ]]; then
-      brew install starship
-    else
-      mkdir -p "$HOME/.local/bin"
-      curl -sS https://starship.rs/install.sh | sh -s -- -y --bin-dir "$HOME/.local/bin"
-    fi
-  fi
-
-  log_success "Dependencies installed"
-}
-
-###############################################################################
-# Shell Detection
-###############################################################################
-
-detect_shell() {
-  HAS_ZSH=false
-  HAS_BASH=false
-
-  command -v zsh  &>/dev/null && HAS_ZSH=true
-  command -v bash &>/dev/null && HAS_BASH=true
-
-  if $HAS_ZSH; then
-    SHELL_NAME="zsh"
-  else
-    SHELL_NAME="bash"
-  fi
-
-  log_info "Detected shell: $SHELL_NAME (zsh=$HAS_ZSH, bash=$HAS_BASH)"
-}
-
-###############################################################################
-# Set Default Shell
-###############################################################################
-
-set_default_shell() {
-  if ! $HAS_ZSH; then
-    return
-  fi
-
-  local zsh_path
-  zsh_path="$(command -v zsh)"
-
-  # Already set to zsh — typical in container images that pre-set
-  # ENV SHELL=/usr/bin/zsh (e.g., the OCP workspace base image).
-  if [[ "$SHELL" == "$zsh_path" ]]; then
-    log_info "Default shell already set to zsh"
-    return
-  fi
-
-  # Skip the sudo-requiring path entirely if sudo isn't usable
-  # (no-sudo environments include OCP restricted-v2 pods, where
-  # CAP_SETUID is dropped and sudo can't elevate). Set $SHELL for
-  # this session so login shells inherit it; that's the best we can
-  # do without `chsh`.
-  if ! sudo -n true 2>/dev/null; then
-    log_warning "sudo unavailable — skipping chsh; exporting SHELL=$zsh_path for this session"
-    export SHELL="$zsh_path"
-    return
-  fi
-
-  # Ensure zsh is in /etc/shells
-  if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
-    log_info "Adding $zsh_path to /etc/shells"
-    echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null
-  fi
-
-  log_info "Setting default shell to zsh..."
-  sudo chsh -s "$zsh_path" "$(whoami)" || log_warning "chsh failed; SHELL stays as-is"
-  log_success "Default shell set to zsh"
-}
-
-###############################################################################
-# Oh-My-Zsh + Plugins (zsh only)
-###############################################################################
-
-install_ohmyzsh() {
-  if ! $HAS_ZSH; then
-    log_info "Skipping oh-my-zsh (zsh not found)"
-    return
-  fi
-
-  if [[ -d "$HOME/.oh-my-zsh" ]]; then
-    log_info "oh-my-zsh already installed"
-  else
-    log_info "Installing oh-my-zsh..."
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-    log_success "oh-my-zsh installed"
-  fi
-
-  local ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-
-  if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]]; then
-    git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-  fi
-
-  if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]]; then
-    git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
-  fi
-}
-
-###############################################################################
-# Vim-Plug
-###############################################################################
-
-install_vim_plug() {
-  local vim_plug="$HOME/.vim/autoload/plug.vim"
-  if [[ ! -f "$vim_plug" ]]; then
-    log_info "Installing vim-plug..."
-    curl -fLo "$vim_plug" --create-dirs \
-      https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-    log_success "vim-plug installed (run :PlugInstall in vim)"
-  else
-    log_info "vim-plug already installed"
-  fi
-}
-
-###############################################################################
-# TPM (Tmux Plugin Manager)
-###############################################################################
-
-install_tpm() {
-  if [[ -d "$HOME/.tmux/plugins/tpm" ]]; then
-    log_info "TPM already installed"
-  else
-    log_info "Installing TPM..."
-    git clone --depth=1 https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
-    log_success "TPM installed (prefix + I in tmux to install plugins)"
-  fi
-}
-
-###############################################################################
-# Symlinks (idempotent, with backup)
-###############################################################################
-
-safe_symlink() {
-  local src="$1"
-  local dest="$2"
-
-  mkdir -p "$(dirname "$dest")"
-  [[ -L "$dest" ]] && rm "$dest"
-  [[ -f "$dest" ]] && mv "$dest" "$dest.backup.$(date +%s)"
-
-  ln -sf "$src" "$dest"
-  log_success "Linked: $dest -> $src"
-}
-
-create_symlinks() {
-  log_info "Creating symlinks..."
-
-  # Shared shell config
-  safe_symlink "$DOTFILES_DIR/core/.shellrc" "$HOME/.shellrc"
-
-  # Shell RC — symlink based on what's available
-  if $HAS_ZSH; then
-    safe_symlink "$DOTFILES_DIR/core/.zshrc" "$HOME/.zshrc"
-  fi
-  if $HAS_BASH; then
-    safe_symlink "$DOTFILES_DIR/core/.bashrc" "$HOME/.bashrc"
-  fi
-
-  # Git
-  safe_symlink "$DOTFILES_DIR/core/.gitconfig" "$HOME/.gitconfig"
-  safe_symlink "$DOTFILES_DIR/core/.gitignore_global" "$HOME/.gitignore_global"
-  safe_symlink "$DOTFILES_DIR/core/.gitmessage" "$HOME/.gitmessage"
-
-  # Tmux
-  safe_symlink "$DOTFILES_DIR/core/.tmux.conf" "$HOME/.tmux.conf"
-
-  # Vim
-  safe_symlink "$DOTFILES_DIR/core/.vimrc" "$HOME/.vimrc"
-
-  # Neovim (use same vimrc)
-  mkdir -p "$HOME/.config/nvim"
-  safe_symlink "$DOTFILES_DIR/core/.vimrc" "$HOME/.config/nvim/init.vim"
-
-  # Starship
-  mkdir -p "$HOME/.config"
-  safe_symlink "$DOTFILES_DIR/starship/starship.toml" "$HOME/.config/starship.toml"
-
-  # VS Code (if directory exists)
-  if [[ -d "$HOME/.config/Code/User" ]]; then
-    safe_symlink "$DOTFILES_DIR/vscode/settings.json" "$HOME/.config/Code/User/settings.json"
-    safe_symlink "$DOTFILES_DIR/vscode/keybindings.json" "$HOME/.config/Code/User/keybindings.json"
-  elif [[ -d "$HOME/Library/Application Support/Code/User" ]]; then
-    safe_symlink "$DOTFILES_DIR/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json"
-    safe_symlink "$DOTFILES_DIR/vscode/keybindings.json" "$HOME/Library/Application Support/Code/User/keybindings.json"
-  fi
-}
-
-###############################################################################
-# Main
-###############################################################################
+  shift
+done
+export DRY_RUN NONINTERACTIVE
 
 main() {
-  log_info "Installing dotfiles..."
-  echo ""
+  detect_platform
+  log_info "Platform: $OS/$ARCH ($OS_FAMILY)"
+  [[ "$DRY_RUN" == 1 ]] && log_info "Dry run: nothing will be changed"
 
-  detect_environment "$@"
-  echo ""
+  # Profiles: flags, else the picker, else what was saved last time, else
+  # $DOTFILES_PROFILES, else base only.
+  local chosen
+  if [[ "$HAVE_REQUEST" == 1 ]]; then
+    chosen="$REQUESTED"
+  else
+    chosen="$(saved_profiles || true)"
+    [[ -z "$chosen" ]] && chosen="${DOTFILES_PROFILES:-${DOTFILES_PROFILE:-}}"
+    if [[ "$NONINTERACTIVE" != 1 && -t 0 && -t 1 && "$LINK_ONLY" != 1 ]]; then
+      chosen="$(pick_profiles "$chosen")"
+    fi
+  fi
+  # shellcheck disable=SC2086 # word-split the space-separated list
+  resolve_profiles $chosen
+  log_info "Profiles: ${RESOLVED[*]}"
 
-  # Tool/plugin installs are best-effort: a failure (no sudo, no network,
-  # apt locked) must not abort the run or mark a Coder workspace as failed.
-  # Symlinking the configs below is the core job and always runs.
-  install_packages   || log_warning "package install phase had issues (continuing)"
-  echo ""
+  if [[ "$LINK_ONLY" == 1 ]]; then
+    log_step "Linking configs (link-only)"
+    link_home
+    save_profiles
+    log_success "Done"
+    return
+  fi
 
-  detect_shell
-  echo ""
+  detect_sudo
+  [[ "$OS_FAMILY" == macos ]] || can_sudo || log_warning "No sudo: system packages will be skipped"
 
-  set_default_shell  || log_warning "set_default_shell had issues (continuing)"
-  echo ""
+  log_step "System packages"
+  case "$OS_FAMILY" in
+    macos | debian | rhel)
+      # shellcheck source=/dev/null
+      source "$DOTFILES_DIR/os/$OS_FAMILY.sh"
+      os_install "${RESOLVED[@]}" || log_warning "System package phase had issues (continuing)"
+      ;;
+    *) log_warning "Unsupported package manager; install zsh, tmux, git and curl yourself" ;;
+  esac
 
-  install_ohmyzsh    || log_warning "oh-my-zsh phase had issues (continuing)"
-  echo ""
+  log_step "Linking configs"
+  link_home
+  save_profiles
+  configure_git_local
 
-  install_vim_plug   || log_warning "vim-plug phase had issues (continuing)"
-  echo ""
+  log_step "CLI tools (mise)"
+  install_mise || log_warning "mise install failed (continuing)"
+  install_profile_tools
 
-  install_tpm        || log_warning "tpm phase had issues (continuing)"
-  echo ""
+  log_step "Shell and editor plugins"
+  install_ohmyzsh || log_warning "oh-my-zsh had issues (continuing)"
+  install_tpm || log_warning "TPM had issues (continuing)"
+  install_vim_plug || log_warning "vim-plug had issues (continuing)"
+  bootstrap_nvim || log_warning "Neovim bootstrap had issues (continuing)"
 
-  create_symlinks
-  echo ""
+  log_step "Profile post-install"
+  run_post_installs
 
-  log_success "Done! Restart your shell or: source ~/.${SHELL_NAME}rc"
-  echo "  - Run :PlugInstall in vim to install plugins"
-  echo "  - Run prefix + I in tmux to install plugins"
-  echo ""
+  set_default_shell || true
+
+  echo
+  log_success "Done. Open a new terminal (or: exec zsh)."
+  log_info "Change profiles any time: ./install.sh --profiles ...  (see --list)"
 }
 
-main "$@"
+main

@@ -1,0 +1,5 @@
+# Operating in AWS. App-development tools (CDK etc.) are in aws-dev.
+[tools]
+aws-cli = "latest"
+"aqua:aws/session-manager-plugin" = "latest"
+granted = "latest"   # role/SSO switching: `assume`

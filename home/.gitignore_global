@@ -1,0 +1,79 @@
+# ~/.gitignore_global
+# Applies to every repository on this machine, so it only lists files that
+# are never project content: OS litter, editor state, and secrets.
+#
+# Build output, dependency dirs, lockfiles and tool config (lib/, build/,
+# vendor/, .terraform.lock.hcl, .envrc, .tool-versions, .vscode/...) are
+# deliberately absent: they are real project files in some repos (lib/ is
+# where CDK puts stacks; Terraform wants its lock file committed), and a
+# global ignore hides them silently. Ignore those per project instead.
+
+###############################################################################
+# Operating System Files
+###############################################################################
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+.DocumentRevisions-V100
+
+# Windows
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+
+# Linux
+.directory
+.Trash-*
+.nfs*
+
+###############################################################################
+# Editor State
+###############################################################################
+
+# Vim / Neovim
+*.swp
+*.swo
+.*.sw[a-p]
+*.un~
+Session.vim
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# JetBrains (workspace state only; shared run configs may be committed)
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/shelf/
+
+###############################################################################
+# Local Environment and Secrets
+###############################################################################
+
+.env
+.env.local
+.env.*.local
+.direnv/
+*.pem
+*.p12
+*.pfx
+*.kubeconfig
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+# Terraform state can hold secrets in plain text
+*.tfstate
+*.tfstate.*
+.terraform/

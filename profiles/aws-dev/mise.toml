@@ -1,0 +1,5 @@
+[tools]
+python = "3.12"
+aws-cdk = "latest"
+"npm:typescript" = "latest"
+cfn-lint = "latest"

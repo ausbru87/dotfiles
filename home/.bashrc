@@ -55,4 +55,4 @@ command -v direnv >/dev/null 2>&1 && eval "$(direnv hook bash)"
 # Shared configuration
 ###############################################################################
 
-source "$DOTFILES_DIR/core/.shellrc"
+source "$DOTFILES_DIR/home/.shellrc"

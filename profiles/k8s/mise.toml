@@ -1,0 +1,11 @@
+[tools]
+kubectl = "latest"
+helm = "latest"
+k9s = "latest"
+kubectx = "latest"
+kubens = "latest"
+kustomize = "latest"
+kind = "latest"
+stern = "latest"
+krew = "latest"
+kubeconform = "latest"

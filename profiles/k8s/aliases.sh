@@ -1,6 +1,6 @@
 #!/bin/bash
-# DevOps/Infrastructure profile aliases
-# kubectl, helm, terraform, openshift
+# Kubernetes profile aliases
+# kubectl, helm, openshift
 
 ###############################################################################
 # Kubernetes (kubectl)
@@ -119,36 +119,23 @@ if command -v helm &>/dev/null; then
 fi
 
 ###############################################################################
-# Terraform
-###############################################################################
-
-if command -v terraform &>/dev/null; then
-  alias tf='terraform'
-  alias tfi='terraform init'
-  alias tfp='terraform plan'
-  alias tfa='terraform apply'
-  alias tfd='terraform destroy'
-  alias tfo='terraform output'
-  alias tfs='terraform state'
-  alias tfsl='terraform state list'
-  alias tfv='terraform validate'
-  alias tff='terraform fmt'
-fi
-
-###############################################################################
 # Helper Functions
 ###############################################################################
 
 # Get logs from all containers in a pod
+# Without a namespace argument these use the context's namespace (ksetns),
+# rather than forcing "default".
 klogs() {
   [[ -z "$1" ]] && { echo "Usage: klogs <pod-name> [namespace]"; return 1; }
-  kubectl logs -n "${2:-default}" "$1" --all-containers=true
+  local ns=(); [[ -n "$2" ]] && ns=(-n "$2")
+  kubectl logs "${ns[@]}" "$1" --all-containers=true
 }
 
 # Exec into pod
 kexec() {
   [[ -z "$1" ]] && { echo "Usage: kexec <pod-name> [command] [namespace]"; return 1; }
-  kubectl exec -it -n "${3:-default}" "$1" -- "${2:-/bin/bash}"
+  local ns=(); [[ -n "$3" ]] && ns=(-n "$3")
+  kubectl exec -it "${ns[@]}" "$1" -- "${2:-/bin/bash}"
 }
 
 # Get secret value (base64 decoded)
